@@ -3025,7 +3025,7 @@ export const positions = [
     {
         path: ['TdB Thématique', 'ETUDES', 'Thèmes tactiques', 'Le Double Novotny de Troitzky'],
         title: 'TdB25-6 : A. Troitzky (Magyar Sakkvilág, 1935)',
-        fen: '1R6/8/8/8/4p3/5k2/r7/5K2 w - - 0 1',
+        fen: '3k4/3p4/P2P2P1/p1p1P3/K3p3/3P3B/P3p2P/3N3b w - - 0 1',
         url: 'https://lichess.org/study/TOpdMfob/TkHdqiNB'
     },
 
