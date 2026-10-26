@@ -960,9 +960,9 @@ export const positions = [
        path: ['TdB Chronologique', 'TdB20', 'Finales {RD} vs {rp} - {p}-Fou en 7e - {r} grand côté'],
         title: 'TdB20-4 : Soubirou - Neuhauser (Aix-les Bains, 2009)',
         fen: '8/2P5/3K4/8/1k6/8/8/q7 b - - 0 1',
-        url: 'https://lichess.org/study/vVuH8zyT/vyW8APiw'
+        url: 'https://lichess.org/study/T8YLWdU5/KIeqQiSN'
     },
-
+    
     {
         path: ['TdB Chronologique', 'TdB20', 'Finales {RD} vs {rp} - {p}-Fou en 7e - {r} grand côté'],
         title: 'TdB20-5 : Schlender - Trzaska (Ruhrgebiet, 1997)',
@@ -974,7 +974,7 @@ export const positions = [
         path: ['TdB Chronologique', 'TdB20', 'Etude - Le Rouleau Compresseur de Kling & Horwitz'],
         title: 'TdB20-6 : J. Kling & B. Horwitz (Chess Studies, 1851)',
         fen: '8/8/8/2p5/2Pp4/3K2Pk/7P/8 w - - 0 1',
-        url: 'https://lichess.org/study/vVuH8zyT/aVHKcb1I'
+        url: ''
     },
 
 
