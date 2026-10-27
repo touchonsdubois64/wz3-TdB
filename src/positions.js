@@ -589,21 +589,24 @@ export const positions = [
        path: ['TdB Chronologique', 'TdB12', 'Finales {RD} vs {rp} - {p}-Tour en 7e'],
         title: 'TdB12-4 : Hernando Rodrigo - Sorroche Martin (Vila de Salou, 1995)',
         fen: '6Q1/8/8/6K1/8/8/6kp/8 w - - 0 1',
-        url: 'https://lichess.org/study/OsXJ1z73/zQo88krk'
+        url: 'https://lichess.org/study/OsXJ1z73/zQo88krk',
+        marks: 'piece=Pb:rouge:h2 piece=Kb:rouge:g2 text=2:vert:f2,g3 border:vert:h5,g5,f5,e5,e4,d4,d3,d2,d1,e1,f1,g1,h1,h3,h4,g4,f4,e3,f3,g3,f2,e2,g2,h2'
     },
 
     {
         path: ['TdB Chronologique', 'TdB12', 'Finales {RD} vs {rp} - {p}-Tour en 7e'],
         title: 'TdB12-5 : Leentjens - Huizinga (Groningue, 2004)',
         fen: '8/2Q5/8/8/8/8/pk2K3/8 w - - 0 1',
-        url: 'https://lichess.org/study/OsXJ1z73/LVtkaKDW'
+        url: 'https://lichess.org/study/OsXJ1z73/LVtkaKDW',
+        marks: 'piece=Pb:rouge:a2 piece=Kb:rouge:b2 text=2:vert:b3,c2 border:vert:a5,b5,c5,d5,d4,e4,e3,e2,e1,d1,c1,b1,a1,a2,a3,c4,c3,d3,d2,c2,b2,b3,b4,a4'
     },
 
     {
         path: ['TdB Chronologique', 'TdB12', 'Etude - L\'Ecran de Salvio'],
         title: 'TdB12-6 : A. Salvio (Trattato dell\'Inventione et Arte Liberale del Gioco di Scacchi, 1634)',
         fen: '8/1QK5/8/8/8/8/p7/k7 w - - 0 1',
-        url: 'https://lichess.org/study/OsXJ1z73/PAArBalA'
+        url: 'https://lichess.org/study/OsXJ1z73/PAArBalA',
+        marks: 'piece=Pb:rouge:a2 piece=Kb:rouge:b2 text=2:vert:b3,c2 border:vert:a5,b5,c5,d5,d4,e4,e3,e2,e1,d1,c1,b1,a1,a2,a3,c4,c3,d3,d2,c2,b2,b3,b4,a4'
     },
 
 
@@ -2651,21 +2654,24 @@ export const positions = [
         path: ['TdB Thématique', 'FINALES', 'Finales de Dames', '{RD} vs {rp}', '{p}-Tour en 7e'],
         title: 'TdB12-4 : Hernando Rodrigo - Sorroche Martin (Vila de Salou, 1995)',
         fen: '6Q1/8/8/6K1/8/8/6kp/8 w - - 0 1',
-        url: 'https://lichess.org/study/OsXJ1z73/zQo88krk'
+        url: 'https://lichess.org/study/OsXJ1z73/zQo88krk',
+        marks: 'piece=Pb:rouge:h2 piece=Kb:rouge:g2 text=2:vert:f2,g3 border:vert:h5,g5,f5,e5,e4,d4,d3,d2,d1,e1,f1,g1,h1,h3,h4,g4,f4,e3,f3,g3,f2,e2,g2,h2'
     },
 
      {
         path: ['TdB Thématique', 'FINALES', 'Finales de Dames', '{RD} vs {rp}', '{p}-Tour en 7e'],
         title: 'TdB12-5 : Leentjens - Huizinga (Groningue, 2004)',
         fen: '8/2Q5/8/8/8/8/pk2K3/8 w - - 0 1',
-        url: 'https://lichess.org/study/OsXJ1z73/LVtkaKDW'
+        url: 'https://lichess.org/study/OsXJ1z73/LVtkaKDW',
+        marks: 'piece=Pb:rouge:a2 piece=Kb:rouge:b2 text=2:vert:b3,c2 border:vert:a5,b5,c5,d5,d4,e4,e3,e2,e1,d1,c1,b1,a1,a2,a3,c4,c3,d3,d2,c2,b2,b3,b4,a4'
     },
     
      {
         path: ['TdB Thématique', 'FINALES', 'Finales de Dames', '{RD} vs {rp}', '{p}-Tour en 7e'],
         title: 'TdB12-6 : A. Salvio (Trattato dell\'Inventione et Arte Liberale del Gioco di Scacchi, 1634)',
         fen: '8/1QK5/8/8/8/8/p7/k7 w - - 0 1',
-        url: 'https://lichess.org/study/OsXJ1z73/PAArBalA'
+        url: 'https://lichess.org/study/OsXJ1z73/PAArBalA',
+        marks: 'piece=Pb:rouge:a2 piece=Kb:rouge:b2 text=2:vert:b3,c2 border:vert:a5,b5,c5,d5,d4,e4,e3,e2,e1,d1,c1,b1,a1,a2,a3,c4,c3,d3,d2,c2,b2,b3,b4,a4'
     },
 
     
