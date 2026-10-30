@@ -30,10 +30,23 @@ documents JSON XPGN, et rattache les annotations à un nœud précis de l'arbre 
 au moyen d'un chemin de coups UCI. La note de conception et le schéma de cette
 première version sont dans `docs/xpgn-format-v1.md`.
 
-Cette version constitue un socle de travail : l'éditeur et le lecteur n'ouvrent
-pas encore directement les fichiers `.xpgn`, et la temporalité des annotations
-au-delà d'une position n'est pas encore implémentée.
+Cette version constitue un socle de travail : Studio sait ouvrir et exporter
+les documents XPGN contenant une partie et ses annotations. La temporalité des
+annotations au-delà d'une position n'est pas encore implémentée.
 
+
+### Création de cours
+
+Le bouton **Nouveau cours** ouvre un premier éditeur de cours : titre, description,
+premier chapitre, texte explicatif et insertion facultative de la position courante
+comme diagramme. Le document est exporté avec le bouton **XPGN**. Le noyau accepte
+également les cours autonomes, les chapitres, les blocs de texte, les diagrammes,
+les exercices à coups attendus en UCI et les parties PGN intégrées. L'interface
+d'édition des exercices, l'ajout de plusieurs chapitres et le lecteur pédagogique
+seront développés progressivement.
+
+Un exemple de cours autonome est disponible dans
+`examples/cours-comprendre-le-centre.xpgn`.
 
 ### Échange de fichiers XPGN
 
