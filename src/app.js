@@ -2317,6 +2317,87 @@ function setupPgnButton() {
   $('.notation-control').append(button);
 }
 
+function buildXpgnDocument() {
+  const annotations = [];
+  const visit = (node) => {
+    if (node.xpgnAnnotations && node.xpgnAnnotations.length) {
+      annotations.push({ at: { path: getXpgnNodePath(node) }, scope: { branch: 'node', durationPlies: 0 }, items: node.xpgnAnnotations });
+    }
+    for (const child of node.children || []) visit(child);
+  };
+  if (rootNode) visit(rootNode);
+  return { format: 'XPGN', version: 1, game: { pgn: buildPgn() }, annotations };
+}
+
+function downloadXpgn() {
+  if (!rootNode || !locked) {
+    showMessage('Chargez ou créez une partie avant l’export XPGN.', 'info');
+    return;
+  }
+  try {
+    const content = stringifyXpgn(buildXpgnDocument());
+    const blob = new Blob([content], { type: 'application/vnd.xpgn+json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'partie.xpgn';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    showMessage('Export XPGN impossible : ' + error.message, 'error');
+  }
+}
+
+function openXpgnFile(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const document = parseXpgn(reader.result);
+      if (!loadPgn(document.game.pgn)) throw new Error('La partie intégrée n’a pas pu être chargée.');
+      const linked = attachXpgnAnnotations(rootNode, document.annotations);
+      marks.setItems(currentNode.xpgnAnnotations || []);
+      afterPosition();
+      showMessage(
+        'Fichier XPGN ouvert : ' + linked.attached + ' annotation(s) restaurée(s)' +
+        (linked.unresolved.length ? ', ' + linked.unresolved.length + ' chemin(s) non retrouvé(s).' : '.'),
+        linked.unresolved.length ? 'info' : 'success',
+        pgnMessage,
+      );
+    } catch (error) {
+      showMessage('Fichier XPGN invalide : ' + error.message, 'error', pgnMessage);
+    }
+  };
+  reader.onerror = () => showMessage('Impossible de lire ce fichier XPGN.', 'error', pgnMessage);
+  reader.readAsText(file, 'UTF-8');
+}
+
+function setupXpgnControls() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.xpgn,application/vnd.xpgn+json,application/json';
+  input.hidden = true;
+  input.addEventListener('change', () => {
+    const file = input.files && input.files[0];
+    if (file) openXpgnFile(file);
+    input.value = '';
+  });
+  document.body.appendChild(input);
+
+  const makeButton = (label, title, action) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'export-pgn-button xpgn-action-button';
+    button.title = title;
+    button.textContent = label;
+    button.addEventListener('click', action);
+    $('.notation-control').append(button);
+  };
+  makeButton('Ouvrir XPGN', 'Ouvrir un document .xpgn', () => input.click());
+  makeButton('XPGN', 'Télécharger la partie et ses annotations au format .xpgn', downloadXpgn);
+}
+
 // ==================================================
 // MENU DE NOTATION (repris de cc2)
 // ==================================================
