@@ -1045,3 +1045,1646 @@ function leaveGame() {
   syncEditorFen();
   updateShiftButtons();
   setStatus('Position éditable');
+}
+
+// ==================================================
+// ARBRE DES COUPS (repris de cc2)
+// ==================================================
+
+function createRoot() {
+  return { parent: null, move: null, source: 'root', children: [], fen: game.fen(), selectedChild: null, comment: null };
+}
+
+function createNode(parent, move, source) {
+  return {
+    parent,
+    move: { color: move.color, from: move.from, to: move.to, san: move.san, promotion: move.promotion || null, nullMove: false },
+    source,
+    children: [],
+    fen: game.fen(),
+    selectedChild: null,
+    comment: null,
+  };
+}
+
+function findChild(node, move) {
+  return node.children.find(
+    (child) =>
+      child.move.from === move.from && child.move.to === move.to && (child.move.promotion || null) === (move.promotion || null),
+  );
+}
+
+function getPath(node) {
+  const path = [];
+  for (let current = node; current && current.parent; current = current.parent) path.unshift(current);
+  return path;
+}
+
+function getMainChild(node) {
+  return node && node.children.length > 0 ? node.children[0] : null;
+}
+
+function rebuildGameToNode(node) {
+  if (!game.load(currentStartFen)) return false;
+  for (const child of getPath(node)) {
+    if (child.move.nullMove) {
+      if (!game.load(child.fen)) return false;
+      continue;
+    }
+    const move = game.move({ from: child.move.from, to: child.move.to, promotion: child.move.promotion || 'q' });
+    if (!move) return false;
+  }
+  return true;
+}
+
+function getLastMoveSquares() {
+  return currentNode && currentNode.move && !currentNode.move.nullMove ? [currentNode.move.from, currentNode.move.to] : [];
+}
+
+function terminationComment() {
+  if (game.in_checkmate()) return 'Mat';
+  if (game.in_stalemate()) return 'Pat';
+  if (game.insufficient_material()) return 'Nulle - Matériel';
+  if (game.in_threefold_repetition()) return 'Nulle - Répétition';
+  if (parseInt(game.fen().split(' ')[4] || '0', 10) >= 100) return 'Nulle - 50 coups';
+  return 'Partie terminée';
+}
+
+function commitMove(move, source) {
+  let child = findChild(currentNode, move);
+  if (!child) {
+    child = createNode(currentNode, move, source);
+    currentNode.children.push(child);
+  }
+  currentNode.selectedChild = child;
+  currentNode = child;
+  marks.setItems(currentNode.xpgnAnnotations || []);
+  child.fen = game.fen();
+  if (game.game_over()) child.comment = terminationComment();
+  afterPosition();
+}
+
+function showNode(node) {
+  if (!locked) return;
+  cancelPromotion();
+  if (!rebuildGameToNode(node)) return;
+  currentNode = node;
+  marks.setItems(currentNode.xpgnAnnotations || []);
+  afterPosition();
+}
+
+// ==================================================
+// RÈGLES DE JEU
+// ==================================================
+
+const isAnalysisMode = () => playerSide === 'analysis';
+const playerColor = () => (isAnalysisMode() ? 'both' : playerSide);
+
+function isPlayerTurn() {
+  if (isAnalysisMode()) return true;
+  return playerSide === 'white' ? game.turn() === 'w' : game.turn() === 'b';
+}
+
+function canUserMove() {
+  return locked && !thinking && !pendingPromotion && !game.game_over() && isPlayerTurn();
+}
+
+function getDests() {
+  const dests = new Map();
+  for (const move of game.moves({ verbose: true })) {
+    if (!dests.has(move.from)) dests.set(move.from, []);
+    dests.get(move.from).push(move.to);
+  }
+  return dests;
+}
+
+/** Annule tout calcul en cours : à appeler à chaque changement de position. */
+function invalidate() {
+  moveToken++;
+  evalId++;
+  thinking = false;
+  engine.cancel();
+  resetAnalysis();
+}
+
+/** Cercles et flèches fournis par le PGN pour la position affichée. */
+function syncShapes() {
+  const shapes = locked && currentNode && currentNode.shapes ? currentNode.shapes : [];
+  ground.setAutoShapes(shapes.map((shape) => ({ orig: shape.orig, dest: shape.dest, brush: shape.brush })));
+}
+
+/** Aligne l'échiquier sur la position de chess.js. */
+function syncBoard() {
+  const turn = game.turn() === 'w' ? 'white' : 'black';
+  ground.set({
+    fen: game.fen(),
+    turnColor: turn,
+    lastMove: getLastMoveSquares(),
+    check: game.in_check() ? turn : false,
+    movable: { free: false, color: playerColor(), showDests: true, dests: canUserMove() ? getDests() : new Map() },
+  });
+}
+
+/** Tout ce qui doit être rafraîchi après un changement de position. */
+function afterPosition() {
+  invalidate();
+  for (let node = currentNode; node; node = node.parent) node.collapsed = false; // la position affichée reste visible
+  syncBoard();
+  syncShapes();
+  updateMoves();
+  updateNavigation();
+  updateStartButtons();
+  updateZoneAvailability();
+  clearZone();
+  fenInput.value = game.fen();
+  lastFenText = fenInput.value;
+  fenInput.classList.remove('invalid');
+
+  const engineToMove = !game.game_over() && !isAnalysisMode() && !isPlayerTurn();
+
+  if (game.game_over()) {
+    setStatus((currentNode && currentNode.comment) || terminationComment());
+  } else if (isAnalysisMode()) {
+    setStatus('Mode analyse');
+  } else {
+    setStatus(engineToMove ? 'Stockfish va jouer' : 'À vous de jouer');
+  }
+
+  requestEvaluation({ tablebaseOnly: engineToMove });
+  if (engineToMove) askStockfish();
+}
+
+// ==================================================
+// COUP DU JOUEUR ET PROMOTION
+// ==================================================
+
+function isPromotionMove(from, to) {
+  const piece = game.get(from);
+  return Boolean(piece && piece.type === 'p' && (to[1] === '8' || to[1] === '1'));
+}
+
+function playerMove(orig, dest) {
+  if (thinking || pendingPromotion || !isPlayerTurn()) {
+    syncBoard();
+    return;
+  }
+  if (isPromotionMove(orig, dest)) {
+    showPromotionChoice(orig, dest);
+    return;
+  }
+  const move = game.move({ from: orig, to: dest });
+  if (!move) {
+    syncBoard();
+    return;
+  }
+  commitMove(move, isAnalysisMode() ? 'analysis' : 'player');
+}
+
+function showPromotionChoice(from, to) {
+  pendingPromotion = { from, to, color: game.turn() };
+  ground.set({ movable: { dests: new Map() } });
+
+  const choices = $('#promotion-choices');
+  choices.innerHTML = '';
+  for (const [type, title] of [['q', 'Dame'], ['r', 'Tour'], ['b', 'Fou'], ['n', 'Cavalier']]) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'promotion-piece';
+    button.title = title;
+    button.setAttribute('aria-label', title);
+    const image = document.createElement('img');
+    image.src = asset('pieces/alpha/' + pendingPromotion.color + type.toUpperCase() + '.svg');
+    image.alt = title;
+    button.appendChild(image);
+    button.addEventListener('click', () => completePromotion(type));
+    choices.appendChild(button);
+  }
+  const modal = $('#promotion-modal');
+  modal.hidden = false;
+  modal.setAttribute('aria-hidden', 'false');
+}
+
+function hidePromotion() {
+  const modal = $('#promotion-modal');
+  modal.hidden = true;
+  modal.setAttribute('aria-hidden', 'true');
+  $('#promotion-choices').innerHTML = '';
+}
+
+function cancelPromotion() {
+  pendingPromotion = null;
+  hidePromotion();
+}
+
+function completePromotion(promotion) {
+  if (!pendingPromotion) return;
+  const { from, to } = pendingPromotion;
+  cancelPromotion();
+  const move = game.move({ from, to, promotion });
+  if (!move) {
+    syncBoard();
+    return;
+  }
+  commitMove(move, isAnalysisMode() ? 'analysis' : 'player');
+}
+
+$('#promotion-cancel').addEventListener('click', () => {
+  cancelPromotion();
+  if (locked) syncBoard();
+});
+
+// ==================================================
+// STOCKFISH JOUE (tables de finales en premier, comme dans cc2)
+// ==================================================
+
+function findImmediateCheckmate() {
+  for (const candidate of game.moves({ verbose: true })) {
+    const replay = new Chess();
+    replay.load(game.fen());
+    const move = replay.move({ from: candidate.from, to: candidate.to, promotion: candidate.promotion });
+    if (move && replay.in_checkmate()) return candidate.from + candidate.to + (candidate.promotion || '');
+  }
+  return null;
+}
+
+async function bestTablebaseMove(fen) {
+  if (!isCovered(fen)) return null;
+  try {
+    const data = await getTablebase(fen);
+    const first = data.moves.find((move) => move && move.uci);
+    return first ? first.uci : null;
+  } catch (error) {
+    return null; // hors ligne ou position non couverte : Stockfish prend le relais
+  }
+}
+
+async function askStockfish() {
+  if (isAnalysisMode() || game.game_over()) return;
+
+  thinking = true;
+  const token = ++moveToken;
+  const fen = game.fen();
+  const sideToMove = game.turn();
+  updateMoves();
+  syncBoard();
+  setStatus('Stockfish réfléchit…');
+
+  const mate = findImmediateCheckmate();
+  if (mate) {
+    playEngineMove(mate, token);
+    return;
+  }
+
+  const tablebaseMove = await bestTablebaseMove(fen);
+  if (token !== moveToken) return;
+  if (tablebaseMove) {
+    playEngineMove(tablebaseMove, token);
+    return;
+  }
+
+  engine.search({
+    fen,
+    depth: 20,
+    movetime: 20000,
+    onInfo: (line) => showEngineEvaluation(line, sideToMove, token),
+    onBest: (uci) => playEngineMove(uci, token),
+  });
+}
+
+function playEngineMove(uci, token) {
+  if (token !== moveToken || !thinking || isAnalysisMode()) return;
+  const move = game.move({
+    from: uci.slice(0, 2),
+    to: uci.slice(2, 4),
+    promotion: uci.length > 4 ? uci.slice(4, 5) : undefined,
+  });
+  thinking = false;
+  if (!move) {
+    syncBoard();
+    updateMoves();
+    return;
+  }
+  commitMove(move, 'stockfish');
+}
+
+// ==================================================
+// ÉVALUATION (gélule) : Stockfish + tables de finales
+// ==================================================
+
+function setHead(text, sub) {
+  evalHead.innerHTML = text ? escapeHtml(text) + (sub ? `<span class="sub">${escapeHtml(sub)}</span>` : '') : '';
+}
+
+function clearEvaluation() {
+  evalId++;
+  tbList = null;
+  panelWanted = null;
+  updateAnalysis();
+  evalHead.innerHTML = '';
+  evalMoves.innerHTML = '';
+}
+
+function showEngineEvaluation(line, sideToMove, token) {
+  if (!evalOn || token !== moveToken) return;
+  const text = evaluationFromInfo(line, sideToMove);
+  if (!text) return;
+  const depth = depthFromInfo(line);
+  setHead(text, 'Stockfish' + (depth ? ' · profondeur ' + depth : ''));
+}
+
+function describeTablebase(tb, fen) {
+  const side = fen.split(' ')[1] === 'w' ? 'white' : 'black';
+  const other = side === 'white' ? 'black' : 'white';
+
+  if (tb.checkmate) return { text: side === 'white' ? '0-1' : '1-0', sub: 'Mat' };
+  if (tb.stalemate) return { text: '0.00', sub: 'Pat · Nulle' };
+
+  switch (tb.category) {
+    case 'draw':
+      return { text: '0.00', sub: 'Nulle · tablebases' };
+    case 'cursed-win':
+    case 'blessed-loss':
+      return { text: '0.00', sub: 'Nulle · règle des 50 coups' };
+    case 'win':
+    case 'loss': {
+      const winner = tb.category === 'win' ? side : other;
+      const label = winner === 'white' ? 'Blancs gagnent' : 'Noirs gagnent';
+      if (Number.isFinite(tb.dtm) && tb.dtm !== 0) {
+        return { text: mateText(winner, tb.dtm), sub: label + ' · tablebases' };
+      }
+      return { text: label, sub: 'Tablebases', winner, label };
+    }
+    default:
+      return null; // résultat inconnu : Stockfish reste l'évaluation de secours
+  }
+}
+
+async function requestEvaluation({ tablebaseOnly = false } = {}) {
+  const id = ++evalId;
+  tbList = null;
+  panelWanted = null;
+  evalHead.innerHTML = '';
+  evalMoves.innerHTML = '';
+
+  if (!evalOn || !locked) {
+    updateAnalysis();
+    return;
+  }
+
+  const fen = game.fen();
+  const sideToMove = game.turn();
+
+  if (game.game_over()) {
+    if (game.in_checkmate()) setHead(sideToMove === 'w' ? '0-1' : '1-0', 'Mat');
+    else setHead('0.00', 'Nulle');
+    return;
+  }
+
+  let tb = null;
+  if (isCovered(fen)) {
+    try {
+      tb = await getTablebase(fen);
+    } catch (error) {
+      tb = null;
+    }
+    if (id !== evalId) return;
+  }
+
+  const described = tb && describeTablebase(tb, fen);
+
+  if (described) {
+    setHead(described.text, described.sub);
+    tbList = annotateMoves(game, tb);
+    renderTablebaseMoves();
+
+    if (described.winner) {
+      // pas de DTM dans les tables : on suit la ligne principale jusqu'au mat
+      const mate = await getMainlineMate(fen, described.winner);
+      if (id === evalId && mate) setHead(mate, described.label + ' · tablebases');
+    }
+    return;
+  }
+
+  if (tb) {
+    tbList = annotateMoves(game, tb);
+    renderTablebaseMoves();
+  }
+
+  if (!tablebaseOnly) {
+    // Stockfish évalue chaque coup légal (MultiPV) : en-tête et liste viennent de la même recherche
+    panelWanted = { key: 'panel|' + fen, fen, ucis: legalUcis(), restrict: false, depth: PANEL_DEPTH, movetime: PANEL_MOVETIME };
+    renderAnalysis();
+    updateAnalysis();
+  }
+}
+
+function verdictText(move) {
+  if (move.outcome === null) return '<small>inconnu</small>';
+  if (move.outcome === 'draw') return move.fifty ? 'Nulle <small>(50 coups)</small>' : 'Nulle';
+
+  // « Blancs gagnent » / « Blancs perdent » : le sujet est le camp qui joue le coup
+  const side = move.color === 'w' ? 'Blancs' : 'Noirs';
+  let text = side + (move.outcome === 'win' ? ' gagnent' : ' perdent');
+  if (move.dtm !== null && move.dtm !== 0) {
+    // dtm : demi-coups mesurés après le coup, du point de vue de l'adversaire
+    text += ` <small>#${Math.ceil((Math.abs(move.dtm) + 1) / 2)}</small>`;
+  }
+  return text;
+}
+
+function renderTablebaseMoves() {
+  if (!tbList || tbList.length === 0) {
+    evalMoves.innerHTML = '';
+    return;
+  }
+
+  const playable = canUserMove();
+  const table = document.createElement('table');
+  table.className = 'tb-list';
+
+  for (const move of tbList) {
+    const row = document.createElement('tr');
+    row.className = 'tb-row ' + (move.outcome || 'unknown') + (playable ? ' playable' : '');
+    row.title = 'Résultat théorique après ce coup (tablebases)';
+
+    const sanCell = document.createElement('td');
+    const converted = convertSan(move.san, move.color === 'w' ? 'white' : 'black');
+    if (notationMode() === 'figurines') sanCell.innerHTML = converted;
+    else sanCell.textContent = converted;
+
+    const verdictCell = document.createElement('td');
+    verdictCell.className = 'verdict';
+    verdictCell.innerHTML = verdictText(move);
+
+    row.append(sanCell, verdictCell);
+    if (playable) {
+      row.addEventListener('click', () => {
+        if (!canUserMove()) return;
+        const played = game.move({ from: move.from, to: move.to, promotion: move.promotion || undefined });
+        if (played) commitMove(played, isAnalysisMode() ? 'analysis' : 'player');
+      });
+    }
+    table.appendChild(row);
+  }
+
+  evalMoves.innerHTML = '';
+  evalMoves.appendChild(table);
+}
+
+evalPill.addEventListener('click', () => {
+  evalOn = !evalOn;
+  evalPill.classList.toggle('active', evalOn);
+  evalPill.setAttribute('aria-expanded', evalOn ? 'true' : 'false');
+  evalPill.title = evalOn ? 'Masquer l’évaluation' : 'Afficher l’évaluation';
+
+  if (!evalOn) {
+    if (!thinking) engine.cancel();
+    clearEvaluation();
+    return;
+  }
+  if (!locked) {
+    showMessage('Choisissez le camp au trait (boutons Trait) pour évaluer la position.', 'info');
+    return;
+  }
+  // pendant que Stockfish joue, son calcul alimente déjà l'évaluation
+  requestEvaluation({ tablebaseOnly: thinking });
+});
+
+// ==================================================
+// WINNING ZONE
+// ==================================================
+
+function zoneAvailable() {
+  // en analyse : toujours ; en partie contre Stockfish : quand c'est à vous de jouer
+  return locked && !game.game_over() && (isAnalysisMode() || isPlayerTurn());
+}
+
+function updateZoneAvailability() {
+  zoneButton.classList.toggle('active', zoneOn);
+  zoneButton.setAttribute('aria-pressed', zoneOn ? 'true' : 'false');
+  zoneButton.classList.toggle('unavailable', !zoneAvailable());
+}
+
+function clearZone() {
+  zoneSig = '';
+  zoneCells.clear();
+  zoneLayer.innerHTML = '';
+  if (zoneWanted) {
+    zoneWanted = null;
+    updateAnalysis();
+  }
+}
+
+/**
+ * Cases que la pièce choisie pourrait occuper « si on pouvait la poser » :
+ * toutes les cases de l'échiquier, sauf pour le Fou (cases de sa couleur)
+ * et le Pion (sa colonne, rangées 2 à 7).
+ */
+function candidateSquares(selected, piece) {
+  const squares = [];
+  const selFile = selected.charCodeAt(0) - 97;
+  const selRank = parseInt(selected[1], 10) - 1;
+  for (let file = 0; file < 8; file++) {
+    for (let rank = 0; rank < 8; rank++) {
+      if (file === selFile && rank === selRank) continue;
+      if (piece.type === 'b' && (file + rank) % 2 !== (selFile + selRank) % 2) continue;
+      if (piece.type === 'p' && (file !== selFile || rank === 0 || rank === 7)) continue;
+      squares.push('abcdefgh'[file] + (rank + 1));
+    }
+  }
+  return squares;
+}
+
+/**
+ * Position obtenue en posant la pièce sur `target`, trait à l'adversaire.
+ * Renvoie null si cette position est impossible (case occupée par une pièce
+ * du même camp ou par le Roi adverse, Roi du joueur en échec, etc.).
+ */
+function hypotheticalFen(selected, target) {
+  const mover = game.turn();
+  const opponent = mover === 'w' ? 'b' : 'w';
+  const grid = placementToGrid(game.fen().split(' ')[0]);
+  const at = (square) => [8 - parseInt(square[1], 10), square.charCodeAt(0) - 97];
+
+  const [sr, sf] = at(selected);
+  const letter = grid[sr][sf];
+  grid[sr][sf] = '';
+
+  const [tr, tf] = at(target);
+  const occupant = grid[tr][tf];
+  if (occupant) {
+    const occupantIsWhite = occupant === occupant.toUpperCase();
+    if (occupantIsWhite === (mover === 'w')) return null; // pièce du même camp
+    if (occupant.toLowerCase() === 'k') return null; // Roi adverse
+  }
+  grid[tr][tf] = letter;
+
+  const placement = gridToPlacement(grid);
+  // le joueur ne doit pas être en échec une fois la pièce posée
+  const probe = new Chess();
+  if (!probe.load(buildFen(placement, mover)) || probe.in_check()) return null;
+
+  return buildFen(placement, opponent);
+}
+
+/** Résultat pour le joueur : 'win' | 'draw' | 'loss' | null. */
+async function hypotheticalOutcome(fen) {
+  const probe = new Chess();
+  if (!probe.load(fen)) return null;
+  if (probe.in_checkmate()) return 'win';
+  if (probe.in_stalemate() || probe.insufficient_material()) return 'draw';
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const data = await getTablebase(fen);
+      return moveOutcomeOf(data); // la catégorie de la position vaut pour l'adversaire
+    } catch (error) {
+      await new Promise((resolve) => setTimeout(resolve, 600 * (attempt + 1)));
+    }
+  }
+  return null;
+}
+
+const zoneCells = new Map(); // case → élément coloré
+
+function setZoneCell(square, outcome) {
+  const known = zoneCells.get(square);
+  if (known) {
+    known.className = 'zone-cell ' + outcome;
+    return;
+  }
+  addZoneCell(square, outcome);
+}
+
+function addZoneCell(square, outcome) {
+  const white = ground.state.orientation === 'white';
+  const file = square.charCodeAt(0) - 97;
+  const rank = parseInt(square[1], 10) - 1;
+  const cell = document.createElement('div');
+  cell.className = 'zone-cell ' + outcome;
+  cell.dataset.square = square;
+  cell.style.left = (white ? file : 7 - file) * 12.5 + '%';
+  cell.style.top = (white ? 7 - rank : rank) * 12.5 + '%';
+  zoneLayer.appendChild(cell);
+  zoneCells.set(square, cell);
+}
+
+const ZONE_CONCURRENCY = 4;
+// ==================================================
+// ANALYSE STOCKFISH PAR COUP (MultiPV) : panneau et zones
+// ==================================================
+//
+// Une seule recherche donne l'évaluation de chaque coup légal (ou de ceux de
+// la pièce choisie, avec « searchmoves »). Le panneau d'évaluation et les
+// couleurs de la zone lisent les mêmes valeurs : ils sont donc cohérents.
+// ==================================================
+
+const PANEL_DEPTH = 18; // tous les coups légaux
+const PANEL_MOVETIME = 15000;
+const ZONE_DEPTH = 22; // coups de la pièce choisie : moins de lignes, donc plus profond
+const ZONE_MOVETIME = 15000;
+const MAX_LINES = 40;
+
+let analysisEngine = null; // second Stockfish, réservé à l'analyse (créé à la demande)
+const analysisCache = new Map(); // fen → Map(coup UCI → { score, depth }), score du point de vue du joueur
+let analysisRunning = null; // clé de la recherche en cours
+const analysisFinished = new Set();
+let panelWanted = null;
+let zoneWanted = null;
+let renderTimer = null;
+
+function getAnalysisEngine() {
+  if (!analysisEngine) analysisEngine = new Engine(asset('stockfish/stockfish-18-lite-single.js'));
+  return analysisEngine;
+}
+
+const legalUcis = () => game.moves({ verbose: true }).map(uciOf);
+
+function resetAnalysis() {
+  if (analysisEngine) analysisEngine.cancel();
+  analysisRunning = null;
+  analysisFinished.clear();
+  panelWanted = null;
+  zoneWanted = null;
+}
+
+/** Classe un score (point de vue du joueur) selon le code couleur de la zone. */
+function classifyScore(score) {
+  if (score.mate !== undefined) return score.mate > 0 ? 'win' : 'loss';
+  const cp = score.cp;
+  if (cp === 0) return 'draw'; // jaune : 0.00
+  if (cp >= 100) return 'win'; // vert : +1.00 ou plus
+  if (cp > 0) return 'plus'; // bleu : entre 0.00 et +1.00
+  if (cp <= -100) return 'loss'; // rose : -1.00 ou moins
+  return 'minus'; // orange : entre -1.00 et 0.00
+}
+
+function recordInfo(fen, info) {
+  if (!analysisCache.has(fen)) analysisCache.set(fen, new Map());
+  const entries = analysisCache.get(fen);
+  const known = entries.get(info.move);
+  if (known && known.depth > info.depth) return false;
+  entries.set(info.move, { score: info.score, depth: info.depth });
+  return true;
+}
+
+/** Choisit la recherche à mener : la zone d'abord, sinon le panneau. */
+function updateAnalysis() {
+  const job = [zoneWanted, panelWanted].find((candidate) => candidate && !analysisFinished.has(candidate.key));
+
+  if (!job) {
+    if (analysisRunning && analysisEngine) analysisEngine.cancel();
+    analysisRunning = null;
+    return;
+  }
+  if (job.key === analysisRunning) return;
+
+  analysisRunning = job.key;
+  getAnalysisEngine().search({
+    fen: job.fen,
+    multipv: Math.min(job.ucis.length, MAX_LINES),
+    searchmoves: job.restrict ? job.ucis : undefined,
+    depth: job.depth,
+    movetime: job.movetime,
+    onInfo: (line) => {
+      const info = parseInfo(line);
+      if (info && recordInfo(job.fen, info)) scheduleRender();
+    },
+    onBest: () => {
+      if (analysisRunning !== job.key) return;
+      analysisRunning = null;
+      analysisFinished.add(job.key);
+      renderAnalysis();
+      updateAnalysis(); // reprend la recherche du panneau si la zone l'avait interrompue
+    },
+  });
+}
+
+function scheduleRender() {
+  if (renderTimer) return;
+  renderTimer = setTimeout(() => {
+    renderTimer = null;
+    renderAnalysis();
+  }, 120);
+}
+
+/** Met à jour le panneau et la zone à partir des valeurs mémorisées. */
+function renderAnalysis() {
+  const fen = game.fen();
+  const entries = analysisCache.get(fen);
+  if (!entries) return;
+  if (zoneWanted && zoneWanted.fen === fen) paintEngineZone(entries);
+  if (panelWanted && panelWanted.fen === fen && evalOn) renderEngineMoves(entries);
+}
+
+function renderEngineMoves(entries) {
+  const turn = game.turn();
+  const legal = new Map(game.moves({ verbose: true }).map((move) => [uciOf(move), move]));
+  const rows = [...entries]
+    .filter(([uci]) => legal.has(uci))
+    .map(([uci, entry]) => ({ move: legal.get(uci), score: entry.score, depth: entry.depth }))
+    .sort((a, b) => scoreValue(b.score) - scoreValue(a.score));
+  if (rows.length === 0) return;
+
+  // en-tête : meilleur coup (même recherche que la liste)
+  const depth = Math.max(...rows.map((row) => row.depth));
+  setHead(formatScore(rows[0].score, turn), 'Stockfish · profondeur ' + depth);
+
+  const playable = canUserMove();
+  const table = document.createElement('table');
+  table.className = 'tb-list';
+  for (const { move, score, depth: rowDepth } of rows) {
+    const row = document.createElement('tr');
+    row.className = 'tb-row ' + classifyScore(score) + (playable ? ' playable' : '');
+    row.title = 'Évaluation de Stockfish après ce coup (point de vue des Blancs), profondeur ' + rowDepth;
+
+    const sanCell = document.createElement('td');
+    const converted = convertSan(move.san, move.color === 'w' ? 'white' : 'black');
+    if (notationMode() === 'figurines') sanCell.innerHTML = converted;
+    else sanCell.textContent = converted;
+
+    const valueCell = document.createElement('td');
+    valueCell.className = 'verdict';
+    valueCell.textContent = formatScore(score, turn);
+
+    row.append(sanCell, valueCell);
+    if (playable) {
+      row.addEventListener('click', () => {
+        if (!canUserMove()) return;
+        const played = game.move({ from: move.from, to: move.to, promotion: move.promotion || undefined });
+        if (played) commitMove(played, isAnalysisMode() ? 'analysis' : 'player');
+      });
+    }
+    table.appendChild(row);
+  }
+  evalMoves.innerHTML = '';
+  evalMoves.appendChild(table);
+}
+
+/** Zone Stockfish : meilleure évaluation parmi les coups menant à chaque case. */
+function paintEngineZone(entries) {
+  const best = new Map();
+  for (const [uci, entry] of entries) {
+    if (!zoneWanted.ucis.includes(uci)) continue;
+    const square = uci.slice(2, 4);
+    const known = best.get(square);
+    if (!known || scoreValue(entry.score) > scoreValue(known)) best.set(square, entry.score);
+  }
+  for (const [square, score] of best) setZoneCell(square, classifyScore(score));
+}
+
+/** Avec tablebases : cases accessibles d'abord (une seule requête), puis toutes les autres. */
+async function tablebaseZone(selected, piece, signature, tb) {
+  const painted = new Set();
+
+  // 1. Cases directement accessibles : résultats déjà fournis par la position courante.
+  const direct = new Map();
+  for (const move of tb.moves) {
+    if (move.uci.slice(0, 2) !== selected) continue;
+    const outcome = moveOutcomeOf(move);
+    if (!outcome) continue;
+    const square = move.uci.slice(2, 4);
+    const known = direct.get(square);
+    if (!known || OUTCOME_PRIORITY[outcome] > OUTCOME_PRIORITY[known]) direct.set(square, outcome);
+  }
+  for (const [square, outcome] of direct) {
+    addZoneCell(square, outcome);
+    painted.add(square);
+  }
+
+  // 2. Cases que la pièce ne peut pas atteindre : une requête par position hypothétique.
+  const jobs = candidateSquares(selected, piece)
+    .filter((square) => !painted.has(square))
+    .map((square) => ({ square, fen: hypotheticalFen(selected, square) }))
+    .filter((job) => job.fen);
+
+  let failures = 0;
+  let next = 0;
+  async function worker() {
+    while (zoneSig === signature && next < jobs.length) {
+      const job = jobs[next++];
+      const outcome = await hypotheticalOutcome(job.fen);
+      if (zoneSig !== signature) return;
+      if (outcome) addZoneCell(job.square, outcome);
+      else failures++;
+    }
+  }
+  await Promise.all(Array.from({ length: ZONE_CONCURRENCY }, worker));
+
+  if (zoneSig === signature && failures > 0) {
+    showMessage('Tablebases : ' + failures + ' case(s) non évaluée(s) (service indisponible ou saturé).');
+  }
+}
+
+const OUTCOME_PRIORITY = { win: 3, draw: 2, loss: 1 };
+
+async function refreshZone() {
+  const selected = ground.state.selected;
+  if (!zoneOn || !zoneAvailable() || !selected) {
+    clearZone();
+    return;
+  }
+  const piece = game.get(selected);
+  if (!piece || piece.color !== game.turn()) {
+    clearZone();
+    return;
+  }
+
+  const fen = game.fen();
+  const signature = selected + '|' + fen + '|' + ground.state.orientation;
+  if (signature === zoneSig) return;
+  clearZone();
+  zoneSig = signature;
+
+  if (isCovered(fen)) {
+    let tb = null;
+    try {
+      tb = await getTablebase(fen);
+    } catch (error) {
+      tb = null; // service indisponible : on se rabat sur Stockfish
+    }
+    if (zoneSig !== signature) return;
+    if (tb) {
+      await tablebaseZone(selected, piece, signature, tb);
+      return;
+    }
+  }
+
+  // Hors tablebases : Stockfish évalue les coups de la pièce choisie
+  // (les valeurs déjà connues s'affichent immédiatement)
+  const ucis = game.moves({ square: selected, verbose: true }).map(uciOf);
+  if (ucis.length === 0) return; // pièce bloquée : rien à évaluer
+  zoneWanted = { key: 'zone|' + fen + '|' + selected, fen, ucis, restrict: true, depth: ZONE_DEPTH, movetime: ZONE_MOVETIME };
+  renderAnalysis();
+  updateAnalysis();
+}
+
+function moveOutcomeOf(entry) {
+  // la catégorie est donnée du point de vue du camp qui a le trait après le coup
+  switch (entry.category) {
+    case 'loss':
+      return 'win'; // l'adversaire est perdant : zone de gain (vert)
+    case 'draw':
+    case 'cursed-win':
+    case 'blessed-loss':
+      return 'draw'; // nulle (jaune)
+    case 'win':
+      return 'loss'; // l'adversaire gagne : zone de défaite (rose)
+    default:
+      return null;
+  }
+}
+
+zoneButton.addEventListener('click', () => {
+  zoneOn = !zoneOn;
+  updateZoneAvailability();
+  clearZone();
+  if (zoneOn && !zoneAvailable()) {
+    showMessage('Winning Zone : figez la position avec un bouton Trait (mode analyse, ou à vous de jouer en mode Jeu).', 'info');
+  }
+  refreshZone();
+});
+
+// La sélection d'une pièce se fait au clavier/souris/doigt : on la relit après chaque geste.
+boardElement.addEventListener('pointerdown', () => setTimeout(refreshZone, 0));
+document.addEventListener('pointerup', () => setTimeout(refreshZone, 0));
+
+// ==================================================
+// NOTATION (français / figurines / international)
+// ==================================================
+
+const notationMode = () => $('#notation').value;
+
+function convertSan(san, color) {
+  const mode = notationMode();
+  if (mode === 'international') return san;
+
+  if (mode === 'french') {
+    const conversion = { K: 'R', Q: 'D', R: 'T', B: 'F', N: 'C' };
+    let result = san;
+    if (conversion[result.charAt(0)]) result = conversion[result.charAt(0)] + result.substring(1);
+    return result.replace(/=([QRBN])/g, (match, piece) => '=' + conversion[piece]);
+  }
+
+  // figurines : mêmes SVG « alpha » que l'échiquier
+  const prefix = color === 'white' ? 'w' : 'b';
+  const makePiece = (piece) =>
+    `<img class="notation-piece" src="${asset('pieces/alpha/' + prefix + piece + '.svg')}" alt="${piece}">`;
+  let result = String(san);
+  if (/^[KQRBN]/.test(result)) result = makePiece(result.charAt(0)) + result.substring(1);
+  return result.replace(/=([QRBN])/g, (match, piece) => '=' + makePiece(piece));
+}
+
+// ==================================================
+// LISTE DES COUPS (repris de cc2)
+// ==================================================
+
+function getStartMoveInfo() {
+  const parts = currentStartFen.trim().split(/\s+/);
+  return { turn: parts[1] || 'w', fullmove: parseInt(parts[5] || '1', 10) || 1 };
+}
+
+function getMoveNumber(node) {
+  const index = getPath(node).length - 1;
+  const start = getStartMoveInfo();
+  return start.turn === 'w' ? start.fullmove + Math.floor(index / 2) : start.fullmove + Math.floor((index + 1) / 2);
+}
+
+function createMoveButton(node, mainLine) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'move-text ' + (mainLine ? 'main-move' : 'variation-move');
+  if (node === currentNode) button.classList.add('current-move');
+
+  const converted = convertSan(node.move.san, node.move.color === 'w' ? 'white' : 'black');
+  if (notationMode() === 'figurines') {
+    button.classList.add('figurine-notation');
+    button.innerHTML = converted;
+  } else {
+    button.textContent = converted;
+  }
+  button.addEventListener('click', () => showNode(node));
+  return button;
+}
+
+function addSpace(container) {
+  container.appendChild(document.createTextNode(' '));
+}
+
+function appendMoveNumber(container, node, forceBlackNumber) {
+  const number = getMoveNumber(node);
+  if (node.move.color === 'w' || forceBlackNumber) {
+    const span = document.createElement('span');
+    span.className = 'move-number';
+    span.textContent = number + (node.move.color === 'w' ? '. ' : '... ');
+    container.appendChild(span);
+  }
+}
+
+const variationDepthClass = (depth) => 'variation-depth-' + (((depth - 1) % 5) + 1);
+
+function promoteVariation(node) {
+  if (!node || !node.parent) return;
+  const siblings = node.parent.children;
+  const index = siblings.indexOf(node);
+  if (index <= 0) return;
+  [siblings[index - 1], siblings[index]] = [siblings[index], siblings[index - 1]];
+  updateMoves();
+}
+
+/** Supprime une variante (et ses sous-variantes), après confirmation. */
+function deleteVariation(node) {
+  if (!node || !node.parent) return;
+  if (!window.confirm('Supprimer cette variante et ses sous-variantes ?')) return;
+
+  const parent = node.parent;
+  const index = parent.children.indexOf(node);
+  if (index < 0) return;
+
+  let inside = false; // la position affichée se trouve-t-elle dans la variante supprimée ?
+  for (let n = currentNode; n; n = n.parent) if (n === node) inside = true;
+
+  parent.children.splice(index, 1);
+  if (parent.selectedChild === node) parent.selectedChild = parent.children[0] || null;
+  if (inside) showNode(parent);
+  else updateMoves();
+}
+
+function toggleVariation(node) {
+  node.collapsed = !node.collapsed;
+  updateMoves();
+}
+
+function varButton(className, text, title, onClick) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'var-btn ' + className;
+  button.title = title;
+  button.setAttribute('aria-label', title);
+  if (text) button.textContent = text;
+  button.addEventListener('click', (event) => {
+    event.stopPropagation();
+    onClick();
+  });
+  return button;
+}
+
+/**
+ * Début d'une sous-variante : chevron bleu (vers le haut = réduire à son premier coup,
+ * vers le bas = déployer), puis, si elle est déployée, « + » vert (la remonter d'un niveau)
+ * et « × » rouge (la supprimer).
+ */
+function appendVariationControls(container, node, { canPromote = true } = {}) {
+  const collapsed = Boolean(node.collapsed);
+  const toggle = varButton(
+    'var-toggle ' + (collapsed ? 'collapsed' : 'expanded'),
+    '',
+    collapsed ? 'Déployer la variante' : 'Réduire la variante à son premier coup',
+    () => toggleVariation(node),
+  );
+  toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+  container.appendChild(toggle);
+  if (collapsed) return;
+
+  if (canPromote) container.appendChild(varButton('var-plus', '+', 'Remonter cette variante', () => promoteVariation(node)));
+  container.appendChild(varButton('var-delete', '×', 'Supprimer cette variante', () => deleteVariation(node)));
+}
+
+/** Variante réduite : seulement son premier coup, suivi de « … » s'il y a une suite. */
+function renderCollapsedVariation(node, container) {
+  appendMoveNumber(container, node, node.move.color === 'b');
+  container.appendChild(createMoveButton(node, false));
+  if (node.children.length > 0) {
+    const more = document.createElement('span');
+    more.className = 'var-more';
+    more.textContent = ' …';
+    container.appendChild(more);
+  }
+}
+
+function renderAlternativeGroup(mainNode, container, depth) {
+  if (!mainNode || !mainNode.parent) return false;
+  const alternatives = mainNode.parent.children.filter((child) => child !== mainNode);
+  if (alternatives.length === 0) return false;
+
+  if (depth === 1) container.appendChild(document.createElement('br'));
+
+  const variation = document.createElement('span');
+  variation.classList.add('variation', variationDepthClass(depth));
+  alternatives.forEach((alternative, index) => {
+    if (index > 0) variation.appendChild(document.createTextNode('; '));
+    const square = alternative.move.nullMove; // changement de trait : crochets
+    variation.appendChild(document.createTextNode(square ? '[ ' : '( '));
+    appendVariationControls(variation, alternative);
+    if (alternative.collapsed) renderCollapsedVariation(alternative, variation);
+    else renderSequence(alternative, variation, { mainLine: false, variationDepth: depth, suppressAlternativesOnFirst: true });
+    variation.appendChild(document.createTextNode(square ? ']' : ')'));
+  });
+  container.appendChild(variation);
+
+  if (depth === 1) container.appendChild(document.createElement('br'));
+  else addSpace(container);
+  return true;
+}
+
+function renderSequence(startNode, container, options = {}) {
+  const mainLine = options.mainLine === true;
+  const variationDepth = options.variationDepth || 0;
+  const suppressFirst = options.suppressAlternativesOnFirst === true;
+
+  let node = startNode;
+  let firstNode = true;
+  let forceBlackNumber = false;
+
+  while (node) {
+    appendMoveNumber(container, node, node.move.color === 'b' && (firstNode || forceBlackNumber));
+    container.appendChild(createMoveButton(node, mainLine));
+
+    if (node.note) {
+      const note = document.createElement('span');
+      note.className = 'pgn-note';
+      note.textContent = ' ' + node.note;
+      container.appendChild(note);
+    }
+
+    if (node.comment) {
+      const comment = document.createElement('span');
+      comment.className = 'game-comment';
+      comment.textContent = ' (' + node.comment + ')';
+      container.appendChild(comment);
+    }
+    addSpace(container);
+
+    let alternativesDisplayed = false;
+    if (!(firstNode && suppressFirst)) {
+      alternativesDisplayed = renderAlternativeGroup(node, container, variationDepth + 1);
+    }
+
+    const next = getMainChild(node);
+    if (!next) break;
+
+    if (next.move.nullMove) {
+      // changement de trait : la suite s'ouvre dans une sous-variante entre crochets
+      const bracket = document.createElement('span');
+      bracket.classList.add('variation', variationDepthClass(variationDepth + 1));
+      bracket.appendChild(document.createTextNode('[ '));
+      appendVariationControls(bracket, next, { canPromote: false });
+      if (next.collapsed) renderCollapsedVariation(next, bracket);
+      else renderSequence(next, bracket, { mainLine: false, variationDepth: variationDepth + 1, suppressAlternativesOnFirst: true });
+      bracket.appendChild(document.createTextNode(']'));
+      container.appendChild(bracket);
+      addSpace(container);
+      renderAlternativeGroup(next, container, variationDepth + 1); // autres suites éventuelles
+      break;
+    }
+
+    forceBlackNumber = alternativesDisplayed && next.move.color === 'b';
+    node = next;
+    firstNode = false;
+  }
+}
+
+// ==================================================
+// DÉFILEMENT AUTOMATIQUE DE LA LISTE DES COUPS (paysage)
+// ==================================================
+//
+// Quand on parcourt la partie avec les boutons de navigation (ou le clavier), le cadre de droite défile
+// pour amener le coup affiché au milieu. Le défilement n'a lieu qu'au changement de position : il ne
+// reprend donc pas la main si l'on fait défiler le cadre à la main, et il est ignoré quand on clique
+// soi-même sur un coup de la liste (la liste ne doit pas bouger sous le doigt).
+// ==================================================
+
+function centerCurrentMove() {
+  if (currentNode === lastCenteredNode) return; // pas de changement de position : on ne touche à rien
+  lastCenteredNode = currentNode;
+  if (!landscapeQuery.matches || clickedInMoves) return;
+  const frame = $('#frame-right');
+  const current = movesElement.querySelector('.current-move');
+  if (!frame || !current || frame.scrollHeight <= frame.clientHeight) return;
+  const frameRect = frame.getBoundingClientRect();
+  const rect = current.getBoundingClientRect();
+  const delta = rect.top + rect.height / 2 - (frameRect.top + frame.clientHeight / 2);
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  frame.scrollTo({ top: frame.scrollTop + delta, behavior: reduced ? 'auto' : 'smooth' });
+}
+
+function updateMoves() {
+  movesElement.innerHTML = '';
+  movesElement.classList.toggle('suspended', !locked && Boolean(rootNode));
+  if (rootNode && rootNode.note) {
+    const intro = document.createElement('span');
+    intro.className = 'pgn-note';
+    intro.textContent = rootNode.note + ' ';
+    movesElement.appendChild(intro);
+  }
+  if (rootNode && rootNode.children.length > 0) {
+    renderSequence(getMainChild(rootNode), movesElement, { mainLine: true, variationDepth: 0 });
+  }
+  if (thinking) {
+    const note = document.createElement('span');
+    note.className = 'thinking';
+    note.textContent = ' Stockfish réfléchit…';
+    movesElement.appendChild(note);
+  }
+  centerCurrentMove();
+}
+
+function updateNavigation() {
+  const atRoot = !currentNode || currentNode === rootNode;
+  const atEnd = !currentNode || currentNode.children.length === 0;
+  $('#first').disabled = !locked || atRoot;
+  $('#previous').disabled = !locked || atRoot;
+  $('#next').disabled = !locked || atEnd;
+  $('#last').disabled = !locked || atEnd;
+  $('#restart').disabled = !locked;
+}
+
+$('#first').addEventListener('click', () => rootNode && showNode(rootNode));
+$('#previous').addEventListener('click', () => currentNode && currentNode.parent && showNode(currentNode.parent));
+$('#next').addEventListener('click', () => {
+  const child = getMainChild(currentNode);
+  if (child) showNode(child);
+});
+$('#last').addEventListener('click', () => {
+  let node = currentNode;
+  while (node && getMainChild(node)) node = getMainChild(node);
+  if (node) showNode(node);
+});
+$('#restart').addEventListener('click', () => {
+  if (locked) enterGame(currentStartFen);
+});
+$('#flip').addEventListener('click', () => {
+  ground.toggleOrientation();
+  marks.render();
+  updateTurnDisc();
+  updateCoordinates();
+  updateShiftButtons();
+  clearZone();
+  refreshZone();
+});
+
+// ==================================================
+// PGN (repris de cc2)
+// ==================================================
+
+const escapePgnValue = (value) => String(value || '').replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+
+function getPgnMoveText(node, ply) {
+  const start = getStartMoveInfo();
+  const number = start.fullmove + Math.floor((ply + (start.turn === 'w' ? 0 : 1)) / 2);
+  if (node.move.color === 'w') return number + '. ' + node.move.san;
+  return ply === 0 ? number + '... ' + node.move.san : node.move.san;
+}
+
+const BRUSH_LETTER = { red: 'R', green: 'G', blue: 'B', yellow: 'Y' };
+
+/** Commentaire { … } d'une position : texte + [%csl …] (cercles) + [%cal …] (flèches). */
+function pgnComment(node) {
+  const parts = [];
+  if (node.note) parts.push(node.note.replace(/[{}]/g, ' '));
+  // Directives PGN non converties en éléments graphiques : [%eval], [%clk], etc.
+  for (const directive of node.directives || []) {
+    if (directive) parts.push('[%' + directive.replace(/[{}]/g, ' ') + ']');
+  }
+  const shapes = node.shapes || [];
+  const circles = shapes.filter((shape) => !shape.dest).map((shape) => (BRUSH_LETTER[shape.brush] || 'G') + shape.orig);
+  const arrows = shapes.filter((shape) => shape.dest).map((shape) => (BRUSH_LETTER[shape.brush] || 'G') + shape.orig + shape.dest);
+  if (circles.length) parts.push('[%csl ' + circles.join(',') + ']');
+  if (arrows.length) parts.push('[%cal ' + arrows.join(',') + ']');
+  return parts.length ? ' {' + parts.join(' ') + '}' : '';
+}
+
+function exportPgnLine(node, ply) {
+  if (!node) return '';
+  const nags = (node.nags || []).filter((nag) => Number.isInteger(nag) && nag >= 0 && nag <= 255);
+  let text = getPgnMoveText(node, ply) + (nags.length ? ' ' + nags.map((nag) => '$' + nag).join(' ') : '') + pgnComment(node);
+  const main = getMainChild(node);
+  for (const alternative of node.children.filter((child) => child !== main)) {
+    const variation = exportPgnLine(alternative, ply + 1);
+    if (variation) text += ' (' + variation + ')';
+  }
+  if (main) text += ' ' + exportPgnLine(main, ply + 1);
+  return text;
+}
+
+function buildPgn() {
+  let pgn = '[Event "' + escapePgnValue(positionTitle || 'XPGN Studio') + '"]\n[Site "XPGN Studio"]\n';
+  if (currentStartFen) pgn += '[FEN "' + escapePgnValue(currentStartFen) + '"]\n[SetUp "1"]\n';
+  pgn += '[Result "*"]\n\n';
+  if (rootNode && pgnComment(rootNode)) pgn += pgnComment(rootNode).trim() + ' ';
+  if (rootNode && rootNode.children.length > 0) pgn += exportPgnLine(getMainChild(rootNode), 0) + ' ';
+  return pgn + '*\n';
+}
+
+function downloadPgn() {
+  const blob = new Blob([buildPgn()], { type: 'application/x-chess-pgn;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'xpgn-studio.pgn';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function setupPgnButton() {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'export-pgn-button';
+  button.title = 'Télécharger toutes les variantes en PGN';
+  button.setAttribute('aria-label', 'Télécharger toutes les variantes en PGN');
+  const icon = document.createElement('img');
+  icon.src = asset('images/download-pgn.png');
+  icon.alt = '';
+  icon.className = 'export-pgn-icon';
+  const label = document.createElement('span');
+  label.textContent = 'PGN';
+  button.append(icon, label);
+  button.addEventListener('click', downloadPgn);
+  $('.notation-control').append(button);
+}
+
+function buildXpgnDocument() {
+  const annotations = [];
+  const visit = (node) => {
+    if (node.xpgnAnnotations && node.xpgnAnnotations.length) {
+      annotations.push({ at: { path: getXpgnNodePath(node) }, scope: { branch: 'node', durationPlies: 0 }, items: node.xpgnAnnotations });
+    }
+    for (const child of node.children || []) visit(child);
+  };
+  if (rootNode && !currentXpgnCourseOnly) visit(rootNode);
+  const document = { format: 'XPGN', version: 1, annotations };
+  if (rootNode && !currentXpgnCourseOnly) document.game = { pgn: buildPgn() };
+  if (currentXpgnGames.length) document.games = currentXpgnGames;
+  if (currentXpgnCourse) document.course = currentXpgnCourse;
+  return document;
+}
+
+function downloadXpgn() {
+  if ((!rootNode || !locked) && !currentXpgnCourse) {
+    showMessage('Chargez une partie ou un cours avant l’export XPGN.', 'info');
+    return;
+  }
+  try {
+    const content = stringifyXpgn(buildXpgnDocument());
+    const blob = new Blob([content], { type: 'application/vnd.xpgn+json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'partie.xpgn';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    showMessage('Export XPGN impossible : ' + error.message, 'error');
+  }
+}
+
+function openXpgnFile(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const document = parseXpgn(reader.result);
+      if (!document.game) {
+        // Les cours autonomes sont validés et peuvent être réexportés ; leur
+        // affichage et leur édition pédagogique seront ajoutés à l'interface ensuite.
+        currentXpgnCourse = document.course || null;
+        currentXpgnGames = document.games || [];
+        currentXpgnCourseOnly = Boolean(currentXpgnCourse);
+        if (!currentXpgnCourse) throw new Error('Aucune partie principale ou aucun cours à ouvrir.');
+        showMessage('Cours XPGN chargé et validé. Son affichage et son édition dans Studio arrivent dans une prochaine étape ; vous pouvez déjà le réexporter.', 'info', pgnMessage);
+        return;
+      }
+      // Un document XPGN doit contenir une partie intégralement lisible.
+      if (!loadPgn(document.game.pgn, { strict: true, preserveCourse: true })) {
+        throw new Error('La partie PGN intégrée est invalide ou incomplète.');
+      }
+      currentXpgnCourse = document.course || null;
+      currentXpgnGames = document.games || [];
+      currentXpgnCourseOnly = false;
+      const linked = attachXpgnAnnotations(rootNode, document.annotations);
+      marks.setItems(currentNode.xpgnAnnotations || []);
+      afterPosition();
+      showMessage(
+        'Fichier XPGN ouvert : ' + linked.attached + ' annotation(s) restaurée(s)' +
+        (linked.unresolved.length ? ', ' + linked.unresolved.length + ' chemin(s) non retrouvé(s).' : '') +
+        (currentXpgnCourse ? ' Le contenu du cours est conservé pour réexport.' : ''),
+        linked.unresolved.length || currentXpgnCourse ? 'info' : 'success',
+        pgnMessage,
+      );
+    } catch (error) {
+      showMessage('Fichier XPGN invalide : ' + error.message, 'error', pgnMessage);
+    }
+  };
+  reader.onerror = () => showMessage('Impossible de lire ce fichier XPGN.', 'error', pgnMessage);
+  reader.readAsText(file, 'UTF-8');
+}
+
+function setupXpgnControls() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.xpgn,application/vnd.xpgn+json,application/json';
+  input.hidden = true;
+  input.addEventListener('change', () => {
+    const file = input.files && input.files[0];
+    if (file) openXpgnFile(file);
+    input.value = '';
+  });
+  document.body.appendChild(input);
+
+  const makeButton = (label, title, action) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'export-pgn-button xpgn-action-button';
+    button.title = title;
+    button.textContent = label;
+    button.addEventListener('click', action);
+    $('.notation-control').append(button);
+  };
+  makeButton('Ouvrir XPGN', 'Ouvrir un document .xpgn', () => input.click());
+  makeButton('XPGN', 'Télécharger la partie, ses annotations et le cours au format .xpgn', downloadXpgn);
+  setupCourseAuthoring();
+}
+
+function setupCourseAuthoring() {
+  const dialog = document.createElement('dialog');
+  dialog.className = 'xpgn-course-dialog';
+  dialog.innerHTML = `
+    <form class="xpgn-course-form">
+      <div class="xpgn-course-head">
+        <h2>Créer un cours XPGN</h2>
+        <button type="button" class="xpgn-course-close" aria-label="Fermer">×</button>
+      </div>
+      <label>Titre du cours
+        <input name="title" required maxlength="300" value="Nouveau cours d’échecs">
+      </label>
+      <label>Description
+        <textarea name="description" rows="2" maxlength="5000" placeholder="Quel est l’objectif de ce cours ?"></textarea>
+      </label>
+      <label>Titre du premier chapitre
+        <input name="chapter" required maxlength="300" value="Introduction">
+      </label>
+      <label>Explication
+        <textarea name="text" rows="5" maxlength="20000" required placeholder="Rédigez votre explication…"></textarea>
+      </label>
+      <label class="xpgn-course-check">
+        <input name="diagram" type="checkbox" checked>
+        Ajouter la position actuellement affichée comme diagramme
+      </label>
+      <p class="xpgn-course-note">Le cours sera enregistré dans un fichier .xpgn avec la partie courante, si elle existe.</p>
+      <div class="xpgn-course-actions">
+        <button type="button" class="xpgn-course-cancel">Annuler</button>
+        <button type="submit" class="xpgn-course-create">Créer le cours</button>
+      </div>
+    </form>`;
+  document.body.appendChild(dialog);
+
+  const form = dialog.querySelector('form');
+  const close = () => dialog.close();
+  dialog.querySelector('.xpgn-course-close').addEventListener('click', close);
+  dialog.querySelector('.xpgn-course-cancel').addEventListener('click', close);
+  dialog.addEventListener('click', (event) => {
+    if (event.target === dialog) close();
+  });
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const data = new FormData(form);
+    const title = String(data.get('title') || '').trim();
+    const chapterTitle = String(data.get('chapter') || '').trim();
+    const explanation = String(data.get('text') || '').trim();
+    if (!title || !chapterTitle || !explanation) {
+      showMessage('Le titre du cours, le titre du chapitre et l’explication sont obligatoires.', 'error', pgnMessage);
+      return;
+    }
+    const blocks = [
+      { id: 'introduction', type: 'heading', text: 'Introduction', level: 2 },
+      { id: 'explication', type: 'text', text: explanation },
+    ];
+    if (data.get('diagram') && rootNode && currentNode) {
+      blocks.push({
+        id: 'diagramme-1',
+        type: 'diagram',
+        position: { fen: game.fen() },
+        caption: 'Position de travail',
+      });
+    }
+    currentXpgnCourse = {
+      title,
+      description: String(data.get('description') || '').trim() || undefined,
+      language: 'fr',
+      chapters: [{
+        id: 'chapitre-1',
+        title: chapterTitle,
+        blocks,
+      }],
+    };
+    currentXpgnGames = [];
+    currentXpgnCourseOnly = !rootNode;
+    close();
+    showMessage('Cours créé. Utilisez le bouton XPGN pour enregistrer le document et son contenu.', 'success', pgnMessage);
+  });
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'export-pgn-button xpgn-action-button';
+  button.textContent = 'Nouveau cours';
+  button.title = 'Créer un document de cours XPGN';
+  button.addEventListener('click', () => {
+    const diagram = form.elements.namedItem('diagram');
+    diagram.disabled = !rootNode || !currentNode;
+    diagram.checked = Boolean(rootNode && currentNode);
+    dialog.showModal();
+  });
+  $('.notation-control').append(button);
+}
+
+// ==================================================
+// MENU DE NOTATION (repris de cc2)
+// ==================================================
+
+function setupNotationMenu() {
+  const select = $('#notation');
+  select.classList.add('notation-native-select');
+
+  const menu = document.createElement('div');
+  menu.className = 'notation-menu';
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'notation-menu-button';
+  button.setAttribute('aria-haspopup', 'listbox');
+  button.setAttribute('aria-expanded', 'false');
+  button.title = 'Choisir la notation';
+
+  const preview = document.createElement('span');
+  preview.className = 'notation-menu-preview';
+  const arrow = document.createElement('span');
+  arrow.className = 'notation-menu-arrow';
+  arrow.textContent = '▾';
+  button.append(preview, arrow);
+
+  const list = document.createElement('div');
+  list.className = 'notation-menu-list';
+  list.setAttribute('role', 'listbox');
+  list.hidden = true;
+
+  const choices = [
+    { value: 'french', text: 'R D T F C' },
+    { value: 'figurines', pieces: ['wK', 'wQ', 'wR', 'wB', 'wN'] },
+    { value: 'international', text: 'K Q R B N' },
+  ];
+
+  function fill(container, choice) {
+    container.innerHTML = '';
+    if (choice.pieces) {
+      for (const piece of choice.pieces) {
+        const image = document.createElement('img');
+        image.src = asset('pieces/alpha/' + piece + '.svg');
+        image.alt = '';
+        image.className = 'notation-menu-piece';
+        container.appendChild(image);
+      }
+    } else {
+      container.textContent = choice.text;
+    }
+  }
+
+  const closeMenu = () => {
+    list.hidden = true;
+    button.setAttribute('aria-expanded', 'false');
+  };
+
+  const update = () => {
+    fill(preview, choices.find((c) => c.value === select.value) || choices[0]);
+    list.querySelectorAll('.notation-menu-option').forEach((item) => {
+      const selected = item.dataset.value === select.value;
+      item.classList.toggle('selected', selected);
+      item.setAttribute('aria-selected', selected ? 'true' : 'false');
+    });
+  };
+
+  for (const choice of choices) {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'notation-menu-option';
+    item.dataset.value = choice.value;
+    item.setAttribute('role', 'option');
+    fill(item, choice);
+    item.addEventListener('click', () => {
+      select.value = choice.value;
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      closeMenu();
+    });
+    list.appendChild(item);
+  }
+
+  button.addEventListener('click', (event) => {
+    event.stopPropagation();
+    list.hidden = !list.hidden;
+    button.setAttribute('aria-expanded', list.hidden ? 'false' : 'true');
+  });
+  document.addEventListener('click', (event) => {
+    if (!menu.contains(event.target)) closeMenu();
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeMenu();
+  });
+  select.addEventListener('change', update);
+
+  menu.append(button, list);
+  select.insertAdjacentElement('afterend', menu);
+  update();
+}
+
+$('#notation').addEventListener('change', () => {
+  updateMoves();
+  renderTablebaseMoves();
+});
+
+// ==================================================
+// BOUTONS PLAY (camp du joueur) ET START
+// ==================================================
+
+function setPlayerSide(mode) {
+  playerSide = mode;
+  document.querySelectorAll('.mode-btn').forEach((button) => {
+    const selected = playerSide === button.dataset.mode;
+    button.classList.toggle('selected', selected);
+    button.setAttribute('aria-pressed', selected ? 'true' : 'false');
+  });
+  updateZoneAvailability();
+  clearZone();
+}
+
+document.querySelectorAll('.mode-btn').forEach((button) => {
+  button.addEventListener('click', () => {
+    if (playerSide === button.dataset.mode) return; // un mode reste toujours choisi
+    setPlayerSide(button.dataset.mode);
+    // en partie : Stockfish reprend la main si c'est à lui de jouer
+    if (locked) afterPosition();
+  });
+});
+
+startButtons.w.addEventListener('click', () => onStartClick('w'));
+startButtons.b.addEventListener('click', () => onStartClick('b'));
+
+document.querySelectorAll('.shift-btn').forEach((button) => {
+  button.addEventListener('click', () => shiftPosition(button.dataset.dir));
+});
+
+// ==================================================
+// INITIALISATION
+// ==================================================
+
+buildPalette();
+setupNotationMenu();
+setupPgnButton();
+setupXpgnControls();
+updateCoordinates();
+updateNavigation();
+updateShiftButtons();
+updateStartButtons();
+updateZoneAvailability();
+setStatus('Position éditable');
