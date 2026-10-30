@@ -65,7 +65,7 @@ function exportFilename(title) {
 }
 
 // getExportInfo() doit renvoyer { title, fen } : la position à laquelle se rapportent les annotations.
-export function setupMarks({ layer, panel, buttons, isWhite, onActiveChange, getExportInfo }) {
+export function setupMarks({ layer, panel, buttons, isWhite, onActiveChange, onItemsChange, getExportInfo }) {
   const marks = createMarkSet();
   let hintItems = []; // annotations enregistrées avec la position (positions.js), affichées à la demande
   let hintShown = false;
@@ -377,13 +377,25 @@ export function setupMarks({ layer, panel, buttons, isWhite, onActiveChange, get
         marks.placeSquare(key, tool.type, tool.value, colorId);
       }
       render();
+      if (onItemsChange) onItemsChange([...marks.items]);
     },
 
     clear() {
       marks.clear();
       arrowStart = null;
       render();
+      if (onItemsChange) onItemsChange([]);
     },
+
+    /** Remplace les annotations éditables de la position affichée. */
+    setItems(items) {
+      marks.items.splice(0, marks.items.length, ...(Array.isArray(items) ? items.map((item) => ({ ...item })) : []));
+      arrowStart = null;
+      render();
+    },
+
+    /** Copie les annotations éditables de la position affichée. */
+    getItems: () => marks.items.map((item) => ({ ...item })),
 
     render,
 
