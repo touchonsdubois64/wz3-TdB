@@ -1096,6 +1096,7 @@ function commitMove(move, source) {
   }
   currentNode.selectedChild = child;
   currentNode = child;
+  marks.setItems(currentNode.xpgnAnnotations || []);
   child.fen = game.fen();
   if (game.game_over()) child.comment = terminationComment();
   afterPosition();
