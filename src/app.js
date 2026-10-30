@@ -2143,7 +2143,7 @@ function renderSequence(startNode, container, options = {}) {
     container.appendChild(createMoveButton(node, mainLine));
     const nags = (node.nags || []).filter(nag => Number.isInteger(nag) && nag >= 0 && nag <= 255);
     if (nags.length) {
-      const symbols = {1:'!',2:'?',3:'!!',4:'??',5:'!?',6:'?!',10:'=',13:'+=',14:'=+',15:'∓',16:'±',17:'+−',18:'−+'};
+      const symbols = {1:'!',2:'?',3:'!!',4:'??',5:'!?',6:'?!',10:'=',13:'+=',14:'=+',15:'+−',16:'−+',17:'±',18:'∓'};
       const badge = document.createElement('span');
       badge.className = 'pgn-nags';
       badge.textContent = nags.map(nag => symbols[nag] || '
@@ -2602,8 +2602,8 @@ const MOVE_NAGS = [
   {nag:1,label:'! Bon coup'},{nag:2,label:'? Mauvais coup'},{nag:3,label:'!! Coup brillant'},
   {nag:4,label:'?? Grosse erreur'},{nag:5,label:'!? Coup intéressant'},{nag:6,label:'?! Coup douteux'},
   {nag:10,label:'= Égalité'},{nag:13,label:'+= Avantage blanc'},{nag:14,label:'=+ Avantage noir'},
-  {nag:15,label:'∓ Avantage noir (léger)'},{nag:16,label:'± Avantage blanc (léger)'},
-  {nag:17,label:'+− Gain blanc'},{nag:18,label:'−+ Gain noir'}
+  {nag:15,label:'+− Gain blanc'},{nag:16,label:'−+ Gain noir'},
+  {nag:17,label:'± Avantage blanc (léger)'},{nag:18,label:'∓ Avantage noir (léger)'}
 ];
 function setupMoveAnnotations() {
   const add = (label, title, action) => {
