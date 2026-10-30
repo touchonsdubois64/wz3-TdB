@@ -33,3 +33,17 @@ première version sont dans `docs/xpgn-format-v1.md`.
 Cette version constitue un socle de travail : l'éditeur et le lecteur n'ouvrent
 pas encore directement les fichiers `.xpgn`, et la temporalité des annotations
 au-delà d'une position n'est pas encore implémentée.
+
+
+### Échange de fichiers XPGN
+
+L'interface propose maintenant les commandes **Ouvrir XPGN** et **XPGN** (export).
+À l'ouverture, le PGN embarqué reconstruit l'arbre de coups et les annotations sont
+rattachées aux positions correspondantes. En naviguant dans les coups et les
+variantes, l'éditeur recharge les annotations du nœud courant. L'export rassemble
+la partie et les annotations de tous les nœuds dans un document `.xpgn`.
+
+Cette intégration est encore expérimentale : les annotations XPGN sont attachées
+à une position précise (pas encore de durée ou de propagation automatique), et
+une validation dans un navigateur ainsi que l'exécution complète des tests restent
+nécessaires avant de considérer cette version comme stable.
