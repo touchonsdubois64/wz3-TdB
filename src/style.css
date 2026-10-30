@@ -901,3 +901,20 @@ html[data-theme="dark"] .settings-swatch { border-color: #aaa; }
     .xpgn-course-form { padding: 13px; gap: 10px; }
     .xpgn-course-head h2 { font-size: 1rem; }
 }
+
+/* Lecteur de cours XPGN */
+.xpgn-course-reader { width:min(760px,94vw); max-height:88vh; overflow:auto; border:1px solid var(--edge); border-radius:14px; padding:1.2rem; color:var(--ink); background:var(--paper); }
+.xpgn-course-reader::backdrop,.xpgn-course-dialog::backdrop { background:rgba(20,16,12,.58); }
+.xpgn-course-reader-head { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; }
+.xpgn-course-reader-head h2 { margin:.2rem 0; }
+.xpgn-course-reader-description { margin:.2rem 0 1rem; color:var(--ink-3); }
+.xpgn-course-reader-body { padding:.5rem 0; line-height:1.55; }
+.xpgn-course-text { white-space:pre-wrap; }
+.xpgn-course-block { margin:1rem 0; padding:1rem; border:1px solid var(--edge); border-radius:10px; background:var(--panel); }
+.xpgn-course-board { display:grid; grid-template-columns:repeat(8,1fr); width:min(360px,100%); aspect-ratio:1; margin:.8rem auto; border:1px solid #554; }
+.xpgn-course-square { display:grid; place-items:center; font:clamp(1.2rem,5vw,2.3rem)/1 "DejaVu Sans",serif; }
+.xpgn-course-square.light { background:#f0d9b5; } .xpgn-course-square.dark { background:#b58863; }
+.xpgn-course-caption { text-align:center; font-style:italic; color:var(--ink-3); }
+.xpgn-course-reader-actions { display:flex; justify-content:flex-end; gap:.5rem; flex-wrap:wrap; }
+.xpgn-course-reader button,.xpgn-course-reader select { padding:.45rem .7rem; }
+.xpgn-course-close { border:1px solid var(--edge); border-radius:6px; background:var(--panel); font-size:1.2rem; cursor:pointer; }
