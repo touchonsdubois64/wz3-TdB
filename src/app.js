@@ -2307,7 +2307,31 @@ function exportPgnMove(node, ply) {
   if (!node) return '';
   const nags = (node.nags || []).filter((nag) => Number.isInteger(nag) && nag >= 0 && nag <= 255);
   return getPgnMoveText(node, ply) +
-    (nags.length ? ' ' + nags.map((nag) => 'function buildPgn() {
+    (nags.length ? ' ' + nags.map((nag) => '$' + nag).join(' ') : '') +
+    pgnComment(node);
+}
+
+/**
+ * Les alternatives d'un nœud remplacent son coup principal suivant.
+ * En PGN, elles se placent après ce coup, en revenant à sa position parente.
+ */
+function exportPgnContinuation(node, ply) {
+  if (!node) return '';
+  const main = getMainChild(node);
+  if (!main) return '';
+  let text = ' ' + exportPgnMove(main, ply + 1);
+  for (const alternative of node.children.filter((child) => child !== main)) {
+    const variation = exportPgnLine(alternative, ply + 1);
+    if (variation) text += ' (' + variation + ')';
+  }
+  return text + exportPgnContinuation(main, ply + 1);
+}
+
+function exportPgnLine(node, ply) {
+  if (!node) return '';
+  return exportPgnMove(node, ply) + exportPgnContinuation(node, ply);
+}
+function buildPgn() {
   let pgn = '[Event "' + escapePgnValue(positionTitle || 'XPGN Studio') + '"]\n[Site "XPGN Studio"]\n';
   if (currentStartFen) pgn += '[FEN "' + escapePgnValue(currentStartFen) + '"]\n[SetUp "1"]\n';
   pgn += '[Result "*"]\n\n';
