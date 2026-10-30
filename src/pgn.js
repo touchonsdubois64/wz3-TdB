@@ -46,6 +46,7 @@ const BRUSH = { R: 'red', G: 'green', B: 'blue', Y: 'yellow' };
  */
 function parseComment(inner) {
   const shapes = [];
+  const directives = [];
   const note = inner
     .replace(/\[%(cal|csl)\s+([^\]]*)\]/g, (all, kind, list) => {
       for (const item of list.split(/[\s,]+/).filter(Boolean)) {
@@ -57,10 +58,15 @@ function parseComment(inner) {
       }
       return ' ';
     })
-    .replace(/\[%[^\]]*\]/g, ' ')
+    // Les directives PGN non graphiques (eval, clock, arrows inconnues…) sont
+    // conservées telles quelles afin que l'import/export ne les efface pas.
+    .replace(/\[%([^\]]*)\]/g, (all, directive) => {
+      directives.push(directive.trim());
+      return ' ';
+    })
     .replace(/\s+/g, ' ')
     .trim();
-  return { note, shapes };
+  return { note, shapes, directives };
 }
 
 function tokenize(movetext) {
@@ -116,12 +122,18 @@ export function parsePgn(text, Chess) {
   for (const raw of tokens) {
     if (raw.startsWith('{')) {
       // commentaire : il se rattache au dernier coup joué (ou à la position de départ)
-      const { note, shapes } = parseComment(raw.slice(1, -1));
+      const { note, shapes, directives } = parseComment(raw.slice(1, -1));
       if (note) current.note = current.note ? current.note + ' ' + note : note;
       if (shapes.length > 0) current.shapes = (current.shapes || []).concat(shapes);
+      if (directives.length > 0) current.directives = (current.directives || []).concat(directives);
       continue;
     }
-    if (/^\d+\s*\./.test(raw) || /^\$\d+$/.test(raw) || RESULTS.has(raw)) continue;
+    if (/^\d+\s*\./.test(raw) || RESULTS.has(raw)) continue;
+    if (/^\$\d+$/.test(raw)) {
+      current.nags = current.nags || [];
+      current.nags.push(Number(raw.slice(1)));
+      continue;
+    }
 
     if (raw === '(') {
       if (!previous) {
