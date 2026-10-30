@@ -853,3 +853,51 @@ html[data-theme="dark"] .settings-swatch { border-color: #aaa; }
 .marks-tab.pict.selected { padding: 1px 4px; }
 .marks-tab.pict svg { height: 20px; width: auto; display: block; pointer-events: none; }
 .marks-tab.pict img { height: 22px; width: auto; display: block; pointer-events: none; }
+
+
+/* ==================================================
+   ÉDITEUR INITIAL DE COURS XPGN
+   ================================================== */
+.xpgn-course-dialog {
+    width: min(560px, calc(100vw - 28px));
+    max-width: 560px;
+    max-height: min(88dvh, 760px);
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    color: var(--ink);
+    background: var(--panel);
+    box-shadow: 0 18px 60px rgba(0, 0, 0, .32);
+}
+.xpgn-course-dialog::backdrop { background: rgba(0, 0, 0, .58); }
+.xpgn-course-form { display: grid; gap: 13px; padding: 18px; overflow-y: auto; }
+.xpgn-course-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.xpgn-course-head h2 { margin: 0; font-size: 1.15rem; }
+.xpgn-course-form label { display: grid; gap: 5px; font-size: .88rem; font-weight: 600; }
+.xpgn-course-form input:not([type="checkbox"]),
+.xpgn-course-form textarea {
+    box-sizing: border-box;
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 9px 10px;
+    color: var(--ink);
+    background: var(--paper);
+    font: inherit;
+    font-weight: 400;
+}
+.xpgn-course-form textarea { resize: vertical; min-height: 68px; }
+.xpgn-course-check { display: flex !important; grid-template-columns: auto 1fr; align-items: center; gap: 9px !important; font-weight: 400 !important; }
+.xpgn-course-check input { width: 17px; height: 17px; margin: 0; }
+.xpgn-course-note { margin: 0; color: var(--ink-3); font-size: .8rem; line-height: 1.4; }
+.xpgn-course-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.xpgn-course-actions button, .xpgn-course-close {
+    min-height: 34px; padding: 6px 12px; border: 1px solid var(--line);
+    border-radius: 6px; color: var(--ink); background: var(--paper); cursor: pointer;
+}
+.xpgn-course-actions .xpgn-course-create { color: white; border-color: #376b9d; background: #376b9d; }
+.xpgn-course-close { width: 34px; padding: 0; font-size: 1.35rem; line-height: 1; }
+@media (max-width: 520px) {
+    .xpgn-course-form { padding: 13px; gap: 10px; }
+    .xpgn-course-head h2 { font-size: 1rem; }
+}
