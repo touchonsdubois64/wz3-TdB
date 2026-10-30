@@ -59,6 +59,91 @@ function normalizeAnnotation(annotation, index) {
   };
 }
 
+function requireText(value, label, max = 20000) {
+  if (typeof value !== 'string' || !value.trim() || value.length > max) {
+    fail(label + ' doit être un texte non vide de ' + max + ' caractères maximum.');
+  }
+  return value;
+}
+
+function validatePositionRef(position, label) {
+  if (!position || typeof position !== 'object' || Array.isArray(position)) {
+    fail(label + ' doit préciser une position.');
+  }
+  const hasFen = typeof position.fen === 'string' && position.fen.trim() !== '';
+  const hasPath = Array.isArray(position.path);
+  if (hasFen === hasPath) fail(label + ' doit contenir exactement un FEN ou un chemin UCI.');
+  if (hasFen) {
+    requireText(position.fen, label + '.fen', 200);
+    const fields = position.fen.trim().split(/\\s+/);
+    if (fields.length !== 6 || !/^[1-8\/PNBRQKpnbrqk]+$/.test(fields[0])) {
+      fail(label + '.fen ne ressemble pas à un FEN valide.');
+    }
+    return { fen: position.fen.trim() };
+  }
+  if (!position.path.every((move) => typeof move === 'string' && UCI_MOVE.test(move))) {
+    fail(label + '.path contient un coup UCI invalide.');
+  }
+  return { path: [...position.path] };
+}
+
+function normalizeCourse(course) {
+  if (!course || typeof course !== 'object' || Array.isArray(course)) fail('course invalide.');
+  const title = requireText(course.title, 'course.title', 300);
+  if (!Array.isArray(course.chapters) || course.chapters.length === 0) {
+    fail('un cours doit contenir au moins un chapitre.');
+  }
+  const chapterIds = new Set();
+  const chapters = course.chapters.map((chapter, chapterIndex) => {
+    const label = 'chapitre ' + chapterIndex;
+    if (!chapter || typeof chapter !== 'object' || Array.isArray(chapter)) fail(label + ' invalide.');
+    const id = requireText(chapter.id, label + '.id', 100);
+    if (chapterIds.has(id)) fail('identifiant de chapitre dupliqué : ' + id + '.');
+    chapterIds.add(id);
+    const chapterTitle = requireText(chapter.title, label + '.title', 300);
+    if (!Array.isArray(chapter.blocks) || chapter.blocks.length === 0) fail(label + ' doit contenir au moins un bloc.');
+    const blockIds = new Set();
+    const blocks = chapter.blocks.map((block, blockIndex) => {
+      const blockLabel = label + ', bloc ' + blockIndex;
+      if (!block || typeof block !== 'object' || Array.isArray(block)) fail(blockLabel + ' invalide.');
+      const normalized = { type: block.type };
+      if (block.id !== undefined) {
+        normalized.id = requireText(block.id, blockLabel + '.id', 100);
+        if (blockIds.has(normalized.id)) fail('identifiant de bloc dupliqué : ' + normalized.id + '.');
+        blockIds.add(normalized.id);
+      }
+      if (block.type === 'heading') {
+        normalized.text = requireText(block.text, blockLabel + '.text', 1000);
+        normalized.level = block.level === undefined ? 2 : block.level;
+        if (![2, 3, 4].includes(normalized.level)) fail(blockLabel + '.level doit valoir 2, 3 ou 4.');
+      } else if (block.type === 'text') {
+        normalized.text = requireText(block.text, blockLabel + '.text', 20000);
+      } else if (block.type === 'diagram') {
+        normalized.position = validatePositionRef(block.position, blockLabel + '.position');
+        if (block.caption !== undefined) normalized.caption = requireText(block.caption, blockLabel + '.caption', 1000);
+      } else if (block.type === 'exercise') {
+        normalized.prompt = requireText(block.prompt, blockLabel + '.prompt', 5000);
+        normalized.position = validatePositionRef(block.position, blockLabel + '.position');
+        if (!Array.isArray(block.expectedMoves) || block.expectedMoves.length === 0 ||
+            !block.expectedMoves.every((move) => typeof move === 'string' && UCI_MOVE.test(move))) {
+          fail(blockLabel + '.expectedMoves doit être une liste non vide de coups UCI.');
+        }
+        normalized.expectedMoves = [...block.expectedMoves];
+        if (block.explanation !== undefined) normalized.explanation = requireText(block.explanation, blockLabel + '.explanation', 5000);
+      } else {
+        fail(blockLabel + ' : type non pris en charge (' + String(block.type) + ').');
+      }
+      return normalized;
+    });
+    return { id, title: chapterTitle, blocks };
+  });
+  const result = { title, chapters };
+  if (course.description !== undefined) result.description = requireText(course.description, 'course.description', 5000);
+  if (course.author !== undefined) result.author = requireText(course.author, 'course.author', 300);
+  if (course.language !== undefined) result.language = requireText(course.language, 'course.language', 35);
+  return result;
+}
+
 /** Validate and normalize a document without browser dependencies. */
 export function validateXpgnDocument(document) {
   if (!document || typeof document !== 'object' || Array.isArray(document)) fail('document invalide.');
@@ -77,12 +162,14 @@ export function validateXpgnDocument(document) {
     return normalized;
   });
 
-  return {
+  const normalized = {
     format: XPGN_FORMAT,
     version: XPGN_VERSION,
     game: { pgn: document.game.pgn },
     annotations,
   };
+  if (document.course !== undefined) normalized.course = normalizeCourse(document.course);
+  return normalized;
 }
 
 /** Serialize a validated XPGN document as readable UTF-8 JSON. */
