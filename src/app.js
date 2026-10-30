@@ -2290,6 +2290,567 @@ function exportPgnLine(node, ply) {
   if (!node) return '';
   const nags = (node.nags || []).filter((nag) => Number.isInteger(nag) && nag >= 0 && nag <= 255);
   let text = getPgnMoveText(node, ply) + (nags.length ? ' ' + nags.map((nag) => '
+  for (const alternative of node.children.filter((child) => child !== main)) {
+    const variation = exportPgnLine(alternative, ply + 1);
+    if (variation) text += ' (' + variation + ')';
+  }
+  if (main) text += ' ' + exportPgnLine(main, ply + 1);
+  return text;
+}
+
+function buildPgn() {
+  let pgn = '[Event "' + escapePgnValue(positionTitle || 'XPGN Studio') + '"]\n[Site "XPGN Studio"]\n';
+  if (currentStartFen) pgn += '[FEN "' + escapePgnValue(currentStartFen) + '"]\n[SetUp "1"]\n';
+  pgn += '[Result "*"]\n\n';
+  if (rootNode && pgnComment(rootNode)) pgn += pgnComment(rootNode).trim() + ' ';
+  if (rootNode && rootNode.children.length > 0) pgn += exportPgnLine(getMainChild(rootNode), 0) + ' ';
+  return pgn + '*\n';
+}
+
+function downloadPgn() {
+  const blob = new Blob([buildPgn()], { type: 'application/x-chess-pgn;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'xpgn-studio.pgn';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function setupPgnButton() {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'export-pgn-button';
+  button.title = 'Télécharger toutes les variantes en PGN';
+  button.setAttribute('aria-label', 'Télécharger toutes les variantes en PGN');
+  const icon = document.createElement('img');
+  icon.src = asset('images/download-pgn.png');
+  icon.alt = '';
+  icon.className = 'export-pgn-icon';
+  const label = document.createElement('span');
+  label.textContent = 'PGN';
+  button.append(icon, label);
+  button.addEventListener('click', downloadPgn);
+  $('.notation-control').append(button);
+}
+
+function buildXpgnDocument() {
+  const annotations = [];
+  const visit = (node) => {
+    if (node.xpgnAnnotations && node.xpgnAnnotations.length) {
+      annotations.push({ at: { path: getXpgnNodePath(node) }, scope: { branch: 'node', durationPlies: 0 }, items: node.xpgnAnnotations });
+    }
+    for (const child of node.children || []) visit(child);
+  };
+  if (rootNode) visit(rootNode);
+  return { format: 'XPGN', version: 1, game: { pgn: buildPgn() }, annotations };
+}
+
+function downloadXpgn() {
+  if (!rootNode || !locked) {
+    showMessage('Chargez ou créez une partie avant l’export XPGN.', 'info');
+    return;
+  }
+  try {
+    const content = stringifyXpgn(buildXpgnDocument());
+    const blob = new Blob([content], { type: 'application/vnd.xpgn+json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'partie.xpgn';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    showMessage('Export XPGN impossible : ' + error.message, 'error');
+  }
+}
+
+function openXpgnFile(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const document = parseXpgn(reader.result);
+      // Un document XPGN doit contenir une partie intégralement lisible :
+      // contrairement au collage PGN classique, on refuse tout arbre partiel.
+      if (!loadPgn(document.game.pgn, { strict: true })) {
+        throw new Error('La partie PGN intégrée est invalide ou incomplète.');
+      }
+      const linked = attachXpgnAnnotations(rootNode, document.annotations);
+      marks.setItems(currentNode.xpgnAnnotations || []);
+      afterPosition();
+      showMessage(
+        'Fichier XPGN ouvert : ' + linked.attached + ' annotation(s) restaurée(s)' +
+        (linked.unresolved.length ? ', ' + linked.unresolved.length + ' chemin(s) non retrouvé(s).' : '.'),
+        linked.unresolved.length ? 'info' : 'success',
+        pgnMessage,
+      );
+    } catch (error) {
+      showMessage('Fichier XPGN invalide : ' + error.message, 'error', pgnMessage);
+    }
+  };
+  reader.onerror = () => showMessage('Impossible de lire ce fichier XPGN.', 'error', pgnMessage);
+  reader.readAsText(file, 'UTF-8');
+}
+
+function setupXpgnControls() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.xpgn,application/vnd.xpgn+json,application/json';
+  input.hidden = true;
+  input.addEventListener('change', () => {
+    const file = input.files && input.files[0];
+    if (file) openXpgnFile(file);
+    input.value = '';
+  });
+  document.body.appendChild(input);
+
+  const makeButton = (label, title, action) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'export-pgn-button xpgn-action-button';
+    button.title = title;
+    button.textContent = label;
+    button.addEventListener('click', action);
+    $('.notation-control').append(button);
+  };
+  makeButton('Ouvrir XPGN', 'Ouvrir un document .xpgn', () => input.click());
+  makeButton('XPGN', 'Télécharger la partie et ses annotations au format .xpgn', downloadXpgn);
+}
+
+// ==================================================
+// MENU DE NOTATION (repris de cc2)
+// ==================================================
+
+function setupNotationMenu() {
+  const select = $('#notation');
+  select.classList.add('notation-native-select');
+
+  const menu = document.createElement('div');
+  menu.className = 'notation-menu';
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'notation-menu-button';
+  button.setAttribute('aria-haspopup', 'listbox');
+  button.setAttribute('aria-expanded', 'false');
+  button.title = 'Choisir la notation';
+
+  const preview = document.createElement('span');
+  preview.className = 'notation-menu-preview';
+  const arrow = document.createElement('span');
+  arrow.className = 'notation-menu-arrow';
+  arrow.textContent = '▾';
+  button.append(preview, arrow);
+
+  const list = document.createElement('div');
+  list.className = 'notation-menu-list';
+  list.setAttribute('role', 'listbox');
+  list.hidden = true;
+
+  const choices = [
+    { value: 'french', text: 'R D T F C' },
+    { value: 'figurines', pieces: ['wK', 'wQ', 'wR', 'wB', 'wN'] },
+    { value: 'international', text: 'K Q R B N' },
+  ];
+
+  function fill(container, choice) {
+    container.innerHTML = '';
+    if (choice.pieces) {
+      for (const piece of choice.pieces) {
+        const image = document.createElement('img');
+        image.src = asset('pieces/alpha/' + piece + '.svg');
+        image.alt = '';
+        image.className = 'notation-menu-piece';
+        container.appendChild(image);
+      }
+    } else {
+      container.textContent = choice.text;
+    }
+  }
+
+  const closeMenu = () => {
+    list.hidden = true;
+    button.setAttribute('aria-expanded', 'false');
+  };
+
+  const update = () => {
+    fill(preview, choices.find((c) => c.value === select.value) || choices[0]);
+    list.querySelectorAll('.notation-menu-option').forEach((item) => {
+      const selected = item.dataset.value === select.value;
+      item.classList.toggle('selected', selected);
+      item.setAttribute('aria-selected', selected ? 'true' : 'false');
+    });
+  };
+
+  for (const choice of choices) {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'notation-menu-option';
+    item.dataset.value = choice.value;
+    item.setAttribute('role', 'option');
+    fill(item, choice);
+    item.addEventListener('click', () => {
+      select.value = choice.value;
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      closeMenu();
+    });
+    list.appendChild(item);
+  }
+
+  button.addEventListener('click', (event) => {
+    event.stopPropagation();
+    list.hidden = !list.hidden;
+    button.setAttribute('aria-expanded', list.hidden ? 'false' : 'true');
+  });
+  document.addEventListener('click', (event) => {
+    if (!menu.contains(event.target)) closeMenu();
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeMenu();
+  });
+  select.addEventListener('change', update);
+
+  menu.append(button, list);
+  select.insertAdjacentElement('afterend', menu);
+  update();
+}
+
+$('#notation').addEventListener('change', () => {
+  updateMoves();
+  renderTablebaseMoves();
+});
+
+// ==================================================
+// BOUTONS PLAY (camp du joueur) ET START
+// ==================================================
+
+function setPlayerSide(mode) {
+  playerSide = mode;
+  document.querySelectorAll('.mode-btn').forEach((button) => {
+    const selected = playerSide === button.dataset.mode;
+    button.classList.toggle('selected', selected);
+    button.setAttribute('aria-pressed', selected ? 'true' : 'false');
+  });
+  updateZoneAvailability();
+  clearZone();
+}
+
+document.querySelectorAll('.mode-btn').forEach((button) => {
+  button.addEventListener('click', () => {
+    if (playerSide === button.dataset.mode) return; // un mode reste toujours choisi
+    setPlayerSide(button.dataset.mode);
+    // en partie : Stockfish reprend la main si c'est à lui de jouer
+    if (locked) afterPosition();
+  });
+});
+
+startButtons.w.addEventListener('click', () => onStartClick('w'));
+startButtons.b.addEventListener('click', () => onStartClick('b'));
+
+document.querySelectorAll('.shift-btn').forEach((button) => {
+  button.addEventListener('click', () => shiftPosition(button.dataset.dir));
+});
+
+// ==================================================
+// INITIALISATION
+// ==================================================
+
+buildPalette();
+setupNotationMenu();
+setupPgnButton();
+setupXpgnControls();
+updateCoordinates();
+updateNavigation();
+updateShiftButtons();
+updateStartButtons();
+updateZoneAvailability();
+setStatus('Position éditable');
+ + nag).join(' ') : '') + pgnComment(node);
+  const main = getMainChild(node);
+  for (const alternative of node.children.filter((child) => child !== main)) {
+    const variation = exportPgnLine(alternative, ply + 1);
+    if (variation) text += ' (' + variation + ')';
+  }
+  if (main) text += ' ' + exportPgnLine(main, ply + 1);
+  return text;
+}
+
+function buildPgn() {
+  let pgn = '[Event "' + escapePgnValue(positionTitle || 'XPGN Studio') + '"]\n[Site "XPGN Studio"]\n';
+  if (currentStartFen) pgn += '[FEN "' + escapePgnValue(currentStartFen) + '"]\n[SetUp "1"]\n';
+  pgn += '[Result "*"]\n\n';
+  if (rootNode && pgnComment(rootNode)) pgn += pgnComment(rootNode).trim() + ' ';
+  if (rootNode && rootNode.children.length > 0) pgn += exportPgnLine(getMainChild(rootNode), 0) + ' ';
+  return pgn + '*\n';
+}
+
+function downloadPgn() {
+  const blob = new Blob([buildPgn()], { type: 'application/x-chess-pgn;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'xpgn-studio.pgn';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function setupPgnButton() {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'export-pgn-button';
+  button.title = 'Télécharger toutes les variantes en PGN';
+  button.setAttribute('aria-label', 'Télécharger toutes les variantes en PGN');
+  const icon = document.createElement('img');
+  icon.src = asset('images/download-pgn.png');
+  icon.alt = '';
+  icon.className = 'export-pgn-icon';
+  const label = document.createElement('span');
+  label.textContent = 'PGN';
+  button.append(icon, label);
+  button.addEventListener('click', downloadPgn);
+  $('.notation-control').append(button);
+}
+
+function buildXpgnDocument() {
+  const annotations = [];
+  const visit = (node) => {
+    if (node.xpgnAnnotations && node.xpgnAnnotations.length) {
+      annotations.push({ at: { path: getXpgnNodePath(node) }, scope: { branch: 'node', durationPlies: 0 }, items: node.xpgnAnnotations });
+    }
+    for (const child of node.children || []) visit(child);
+  };
+  if (rootNode) visit(rootNode);
+  return { format: 'XPGN', version: 1, game: { pgn: buildPgn() }, annotations };
+}
+
+function downloadXpgn() {
+  if (!rootNode || !locked) {
+    showMessage('Chargez ou créez une partie avant l’export XPGN.', 'info');
+    return;
+  }
+  try {
+    const content = stringifyXpgn(buildXpgnDocument());
+    const blob = new Blob([content], { type: 'application/vnd.xpgn+json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'partie.xpgn';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    showMessage('Export XPGN impossible : ' + error.message, 'error');
+  }
+}
+
+function openXpgnFile(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const document = parseXpgn(reader.result);
+      // Un document XPGN doit contenir une partie intégralement lisible :
+      // contrairement au collage PGN classique, on refuse tout arbre partiel.
+      if (!loadPgn(document.game.pgn, { strict: true })) {
+        throw new Error('La partie PGN intégrée est invalide ou incomplète.');
+      }
+      const linked = attachXpgnAnnotations(rootNode, document.annotations);
+      marks.setItems(currentNode.xpgnAnnotations || []);
+      afterPosition();
+      showMessage(
+        'Fichier XPGN ouvert : ' + linked.attached + ' annotation(s) restaurée(s)' +
+        (linked.unresolved.length ? ', ' + linked.unresolved.length + ' chemin(s) non retrouvé(s).' : '.'),
+        linked.unresolved.length ? 'info' : 'success',
+        pgnMessage,
+      );
+    } catch (error) {
+      showMessage('Fichier XPGN invalide : ' + error.message, 'error', pgnMessage);
+    }
+  };
+  reader.onerror = () => showMessage('Impossible de lire ce fichier XPGN.', 'error', pgnMessage);
+  reader.readAsText(file, 'UTF-8');
+}
+
+function setupXpgnControls() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.xpgn,application/vnd.xpgn+json,application/json';
+  input.hidden = true;
+  input.addEventListener('change', () => {
+    const file = input.files && input.files[0];
+    if (file) openXpgnFile(file);
+    input.value = '';
+  });
+  document.body.appendChild(input);
+
+  const makeButton = (label, title, action) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'export-pgn-button xpgn-action-button';
+    button.title = title;
+    button.textContent = label;
+    button.addEventListener('click', action);
+    $('.notation-control').append(button);
+  };
+  makeButton('Ouvrir XPGN', 'Ouvrir un document .xpgn', () => input.click());
+  makeButton('XPGN', 'Télécharger la partie et ses annotations au format .xpgn', downloadXpgn);
+}
+
+// ==================================================
+// MENU DE NOTATION (repris de cc2)
+// ==================================================
+
+function setupNotationMenu() {
+  const select = $('#notation');
+  select.classList.add('notation-native-select');
+
+  const menu = document.createElement('div');
+  menu.className = 'notation-menu';
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'notation-menu-button';
+  button.setAttribute('aria-haspopup', 'listbox');
+  button.setAttribute('aria-expanded', 'false');
+  button.title = 'Choisir la notation';
+
+  const preview = document.createElement('span');
+  preview.className = 'notation-menu-preview';
+  const arrow = document.createElement('span');
+  arrow.className = 'notation-menu-arrow';
+  arrow.textContent = '▾';
+  button.append(preview, arrow);
+
+  const list = document.createElement('div');
+  list.className = 'notation-menu-list';
+  list.setAttribute('role', 'listbox');
+  list.hidden = true;
+
+  const choices = [
+    { value: 'french', text: 'R D T F C' },
+    { value: 'figurines', pieces: ['wK', 'wQ', 'wR', 'wB', 'wN'] },
+    { value: 'international', text: 'K Q R B N' },
+  ];
+
+  function fill(container, choice) {
+    container.innerHTML = '';
+    if (choice.pieces) {
+      for (const piece of choice.pieces) {
+        const image = document.createElement('img');
+        image.src = asset('pieces/alpha/' + piece + '.svg');
+        image.alt = '';
+        image.className = 'notation-menu-piece';
+        container.appendChild(image);
+      }
+    } else {
+      container.textContent = choice.text;
+    }
+  }
+
+  const closeMenu = () => {
+    list.hidden = true;
+    button.setAttribute('aria-expanded', 'false');
+  };
+
+  const update = () => {
+    fill(preview, choices.find((c) => c.value === select.value) || choices[0]);
+    list.querySelectorAll('.notation-menu-option').forEach((item) => {
+      const selected = item.dataset.value === select.value;
+      item.classList.toggle('selected', selected);
+      item.setAttribute('aria-selected', selected ? 'true' : 'false');
+    });
+  };
+
+  for (const choice of choices) {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'notation-menu-option';
+    item.dataset.value = choice.value;
+    item.setAttribute('role', 'option');
+    fill(item, choice);
+    item.addEventListener('click', () => {
+      select.value = choice.value;
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      closeMenu();
+    });
+    list.appendChild(item);
+  }
+
+  button.addEventListener('click', (event) => {
+    event.stopPropagation();
+    list.hidden = !list.hidden;
+    button.setAttribute('aria-expanded', list.hidden ? 'false' : 'true');
+  });
+  document.addEventListener('click', (event) => {
+    if (!menu.contains(event.target)) closeMenu();
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeMenu();
+  });
+  select.addEventListener('change', update);
+
+  menu.append(button, list);
+  select.insertAdjacentElement('afterend', menu);
+  update();
+}
+
+$('#notation').addEventListener('change', () => {
+  updateMoves();
+  renderTablebaseMoves();
+});
+
+// ==================================================
+// BOUTONS PLAY (camp du joueur) ET START
+// ==================================================
+
+function setPlayerSide(mode) {
+  playerSide = mode;
+  document.querySelectorAll('.mode-btn').forEach((button) => {
+    const selected = playerSide === button.dataset.mode;
+    button.classList.toggle('selected', selected);
+    button.setAttribute('aria-pressed', selected ? 'true' : 'false');
+  });
+  updateZoneAvailability();
+  clearZone();
+}
+
+document.querySelectorAll('.mode-btn').forEach((button) => {
+  button.addEventListener('click', () => {
+    if (playerSide === button.dataset.mode) return; // un mode reste toujours choisi
+    setPlayerSide(button.dataset.mode);
+    // en partie : Stockfish reprend la main si c'est à lui de jouer
+    if (locked) afterPosition();
+  });
+});
+
+startButtons.w.addEventListener('click', () => onStartClick('w'));
+startButtons.b.addEventListener('click', () => onStartClick('b'));
+
+document.querySelectorAll('.shift-btn').forEach((button) => {
+  button.addEventListener('click', () => shiftPosition(button.dataset.dir));
+});
+
+// ==================================================
+// INITIALISATION
+// ==================================================
+
+buildPalette();
+setupNotationMenu();
+setupPgnButton();
+setupXpgnControls();
+updateCoordinates();
+updateNavigation();
+updateShiftButtons();
+updateStartButtons();
+updateZoneAvailability();
+setStatus('Position éditable');
+ + nag).join(' ') : '') + pgnComment(node);
   const main = getMainChild(node);
   for (const alternative of node.children.filter((child) => child !== main)) {
     const variation = exportPgnLine(alternative, ply + 1);
