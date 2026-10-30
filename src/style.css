@@ -918,3 +918,5 @@ html[data-theme="dark"] .settings-swatch { border-color: #aaa; }
 .xpgn-course-reader-actions { display:flex; justify-content:flex-end; gap:.5rem; flex-wrap:wrap; }
 .xpgn-course-reader button,.xpgn-course-reader select { padding:.45rem .7rem; }
 .xpgn-course-close { border:1px solid var(--edge); border-radius:6px; background:var(--panel); font-size:1.2rem; cursor:pointer; }
+
+.pgn-nags { display:inline-block; margin-left:.15em; color:#8b3b18; font-weight:800; white-space:nowrap; }
