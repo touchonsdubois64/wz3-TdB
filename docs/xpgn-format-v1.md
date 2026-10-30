@@ -34,7 +34,7 @@ Statut : première base technique expérimentale. Cette spécification est volon
 
 ## 3. Partie d'échecs
 
-`game.pgn` contient une partie PGN complète, en-têtes, commentaires et variantes compris. Le parseur PGN existant reste responsable des règles et de la construction de l'arbre de coups. Les données PGN non comprises ne doivent pas être transformées silencieusement en annotations.
+`game.pgn` contient une partie PGN complète, en-têtes, commentaires et variantes compris. Le parseur PGN existant reste responsable des règles et de la construction de l'arbre de coups. Les commentaires textuels, les variantes et les NAG (`$n`) sont conservés par l'import/export de l'éditeur. Les directives reconnues de type `[%eval]` et `[%clk]` sont également conservées comme directives textuelles. Les commandes graphiques `[%cal]` et `[%csl]` sont converties en annotations d'échiquier et réémises lors de l'export PGN. Cette conservation ne garantit pas encore une préservation octet pour octet de tout PGN arbitraire.
 
 ## 4. Identité des positions
 
