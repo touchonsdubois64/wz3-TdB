@@ -41,7 +41,9 @@ import { annotateMoves, getMainlineMate, getTablebase, isCovered, mateText, uciO
 // ==================================================
 
 const $ = (selector) => document.querySelector(selector);
-const asset = (path) => new URL(path, document.baseURI).href;
+// En développement, les ressources statiques historiques sont dans docs/ ;
+// sur GitHub Pages, docs/ devient la racine du site publié.
+const asset = (path) => new URL(import.meta.env.DEV ? `docs/${path}` : path, document.baseURI).href;
 const escapeHtml = (text) =>
   String(text).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
