@@ -116,6 +116,9 @@ let positionTitle = null; // titre de la position choisie dans la bibliothèque
 let editMeta = { turn: 'w', castling: '-', half: 0, full: 1 };
 
 let currentStartFen = '';
+let currentXpgnCourse = null;
+let currentXpgnGames = [];
+let currentXpgnCourseOnly = false;
 let rootNode = null;
 let currentNode = null;
 
@@ -765,6 +768,11 @@ function loadPgn(raw, options = {}) {
     return false;
   }
   pgnInput.classList.remove('invalid');
+  if (!options.preserveCourse) {
+    currentXpgnCourse = null;
+    currentXpgnGames = [];
+    currentXpgnCourseOnly = false;
+  }
   if (!options.fromSolution) currentLibraryPosition = null; // un PGN collé n'est plus la position de la bibliothèque
 
   cancelPromotion();
@@ -2345,13 +2353,17 @@ function buildXpgnDocument() {
     }
     for (const child of node.children || []) visit(child);
   };
-  if (rootNode) visit(rootNode);
-  return { format: 'XPGN', version: 1, game: { pgn: buildPgn() }, annotations };
+  if (rootNode && !currentXpgnCourseOnly) visit(rootNode);
+  const document = { format: 'XPGN', version: 1, annotations };
+  if (rootNode && !currentXpgnCourseOnly) document.game = { pgn: buildPgn() };
+  if (currentXpgnGames.length) document.games = currentXpgnGames;
+  if (currentXpgnCourse) document.course = currentXpgnCourse;
+  return document;
 }
 
 function downloadXpgn() {
-  if (!rootNode || !locked) {
-    showMessage('Chargez ou créez une partie avant l’export XPGN.', 'info');
+  if ((!rootNode || !locked) && !currentXpgnCourse) {
+    showMessage('Chargez une partie ou un cours avant l’export XPGN.', 'info');
     return;
   }
   try {
@@ -2375,18 +2387,31 @@ function openXpgnFile(file) {
   reader.onload = () => {
     try {
       const document = parseXpgn(reader.result);
-      // Un document XPGN doit contenir une partie intégralement lisible :
-      // contrairement au collage PGN classique, on refuse tout arbre partiel.
-      if (!loadPgn(document.game.pgn, { strict: true })) {
+      if (!document.game) {
+        // Les cours autonomes sont validés et peuvent être réexportés ; leur
+        // affichage et leur édition pédagogique seront ajoutés à l'interface ensuite.
+        currentXpgnCourse = document.course || null;
+        currentXpgnGames = document.games || [];
+        currentXpgnCourseOnly = Boolean(currentXpgnCourse);
+        if (!currentXpgnCourse) throw new Error('Aucune partie principale ou aucun cours à ouvrir.');
+        showMessage('Cours XPGN chargé et validé. Son affichage et son édition dans Studio arrivent dans une prochaine étape ; vous pouvez déjà le réexporter.', 'info', pgnMessage);
+        return;
+      }
+      // Un document XPGN doit contenir une partie intégralement lisible.
+      if (!loadPgn(document.game.pgn, { strict: true, preserveCourse: true })) {
         throw new Error('La partie PGN intégrée est invalide ou incomplète.');
       }
+      currentXpgnCourse = document.course || null;
+      currentXpgnGames = document.games || [];
+      currentXpgnCourseOnly = false;
       const linked = attachXpgnAnnotations(rootNode, document.annotations);
       marks.setItems(currentNode.xpgnAnnotations || []);
       afterPosition();
       showMessage(
         'Fichier XPGN ouvert : ' + linked.attached + ' annotation(s) restaurée(s)' +
-        (linked.unresolved.length ? ', ' + linked.unresolved.length + ' chemin(s) non retrouvé(s).' : '.'),
-        linked.unresolved.length ? 'info' : 'success',
+        (linked.unresolved.length ? ', ' + linked.unresolved.length + ' chemin(s) non retrouvé(s).' : '') +
+        (currentXpgnCourse ? ' Le contenu du cours est conservé pour réexport.' : ''),
+        linked.unresolved.length || currentXpgnCourse ? 'info' : 'success',
         pgnMessage,
       );
     } catch (error) {
