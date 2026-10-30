@@ -44,6 +44,16 @@ const $ = (selector) => document.querySelector(selector);
 // En développement, les ressources statiques historiques sont dans docs/ ;
 // sur GitHub Pages, docs/ devient la racine du site publié.
 const asset = (path) => new URL(import.meta.env.DEV ? `docs/${path}` : path, document.baseURI).href;
+
+// Les icônes de l'interface principale sont déclarées directement dans index.html
+// (contrairement aux pièces injectées par JavaScript). En mode dev, elles doivent
+// pointer vers le dossier docs/ qui contient les ressources statiques du projet.
+if (import.meta.env.DEV) {
+  document.querySelectorAll('img[src^="./images/"], img[src^="./pieces/"]').forEach((image) => {
+    const source = image.getAttribute('src');
+    image.src = asset(source.replace(/^\.\//, ''));
+  });
+}
 const escapeHtml = (text) =>
   String(text).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
