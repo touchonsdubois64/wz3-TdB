@@ -2444,7 +2444,93 @@ function setupXpgnControls() {
     $('.notation-control').append(button);
   };
   makeButton('Ouvrir XPGN', 'Ouvrir un document .xpgn', () => input.click());
-  makeButton('XPGN', 'Télécharger la partie et ses annotations au format .xpgn', downloadXpgn);
+  makeButton('XPGN', 'Télécharger la partie, ses annotations et le cours au format .xpgn', downloadXpgn);
+  setupCourseAuthoring();
+}
+
+function setupCourseAuthoring() {
+  const dialog = document.createElement('dialog');
+  dialog.className = 'xpgn-course-dialog';
+  dialog.innerHTML = `
+    <form class="xpgn-course-form">
+      <div class="xpgn-course-head">
+        <h2>Créer un cours XPGN</h2>
+        <button type="button" class="xpgn-course-close" aria-label="Fermer">×</button>
+      </div>
+      <label>Titre du cours
+        <input name="title" required maxlength="300" value="Nouveau cours d’échecs">
+      </label>
+      <label>Description
+        <textarea name="description" rows="2" maxlength="5000" placeholder="Quel est l’objectif de ce cours ?"></textarea>
+      </label>
+      <label>Titre du premier chapitre
+        <input name="chapter" required maxlength="300" value="Introduction">
+      </label>
+      <label>Explication
+        <textarea name="text" rows="5" maxlength="20000" required placeholder="Rédigez votre explication…"></textarea>
+      </label>
+      <label class="xpgn-course-check">
+        <input name="diagram" type="checkbox" checked>
+        Ajouter la position actuellement affichée comme diagramme
+      </label>
+      <p class="xpgn-course-note">Le cours sera enregistré dans un fichier .xpgn avec la partie courante, si elle existe.</p>
+      <div class="xpgn-course-actions">
+        <button type="button" class="xpgn-course-cancel">Annuler</button>
+        <button type="submit" class="xpgn-course-create">Créer le cours</button>
+      </div>
+    </form>`;
+  document.body.appendChild(dialog);
+
+  const form = dialog.querySelector('form');
+  const close = () => dialog.close();
+  dialog.querySelector('.xpgn-course-close').addEventListener('click', close);
+  dialog.querySelector('.xpgn-course-cancel').addEventListener('click', close);
+  dialog.addEventListener('click', (event) => {
+    if (event.target === dialog) close();
+  });
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const data = new FormData(form);
+    const blocks = [
+      { id: 'introduction', type: 'heading', text: 'Introduction', level: 2 },
+      { id: 'explication', type: 'text', text: String(data.get('text') || '').trim() },
+    ];
+    if (data.get('diagram') && rootNode && currentNode) {
+      blocks.push({
+        id: 'diagramme-1',
+        type: 'diagram',
+        position: { fen: game.fen() },
+        caption: 'Position de travail',
+      });
+    }
+    currentXpgnCourse = {
+      title: String(data.get('title')).trim(),
+      description: String(data.get('description') || '').trim() || undefined,
+      language: 'fr',
+      chapters: [{
+        id: 'chapitre-1',
+        title: String(data.get('chapter')).trim(),
+        blocks,
+      }],
+    };
+    currentXpgnGames = [];
+    currentXpgnCourseOnly = !rootNode;
+    close();
+    showMessage('Cours créé. Utilisez le bouton XPGN pour enregistrer le document et son contenu.', 'success', pgnMessage);
+  });
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'export-pgn-button xpgn-action-button';
+  button.textContent = 'Nouveau cours';
+  button.title = 'Créer un document de cours XPGN';
+  button.addEventListener('click', () => {
+    const diagram = form.elements.namedItem('diagram');
+    diagram.disabled = !rootNode || !currentNode;
+    diagram.checked = Boolean(rootNode && currentNode);
+    dialog.showModal();
+  });
+  $('.notation-control').append(button);
 }
 
 // ==================================================
