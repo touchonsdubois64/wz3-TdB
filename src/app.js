@@ -241,6 +241,7 @@ function discardSuspendedIfModified() {
   suspended = null;
   rootNode = null;
   currentNode = null;
+  marks.setItems([]);
   currentStartFen = '';
   updateMoves();
   updateNavigation();
@@ -952,6 +953,7 @@ function enterGame(fen) {
   currentStartFen = game.fen();
   rootNode = createRoot();
   currentNode = rootNode;
+  marks.setItems(currentNode.xpgnAnnotations || []);
   suspended = null;
   locked = true;
   document.body.classList.add('locked');
