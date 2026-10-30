@@ -5,7 +5,7 @@ Application d’analyse et d’entraînement aux échecs, première base de trav
     npm install
     npm run dev      # développement
     npm run build    # site statique dans docs/ (comme cc2), à publier avec GitHub Pages
-    npm test         # tests unitaires des fonctions FEN
+    npm test         # tests unitaires FEN, PGN, annotations et XPGN
 
 Fichiers : `src/app.js` (interface), `src/fen.js` (FEN, translation, validation),
 `src/tablebase.js` (tables Lichess), `src/engine.js` (Stockfish), `src/style.css`.
@@ -21,3 +21,15 @@ les explications et un exemple se trouvent en tête de ce fichier.
 qu'après `npm run build`, puis commit + push de **tout** le dossier `docs`
 (y compris les nouveaux fichiers de `docs/assets`). `npm run dev` lit au contraire
 le fichier source directement, d'où la différence entre la version locale et la version en ligne.
+
+
+## Format XPGN (première version expérimentale)
+
+Le noyau de document se trouve dans `src/xpgn.js`. Il valide et sérialise les
+documents JSON XPGN, et rattache les annotations à un nœud précis de l'arbre PGN
+au moyen d'un chemin de coups UCI. La note de conception et le schéma de cette
+première version sont dans `docs/xpgn-format-v1.md`.
+
+Cette version constitue un socle de travail : l'éditeur et le lecteur n'ouvrent
+pas encore directement les fichiers `.xpgn`, et la temporalité des annotations
+au-delà d'une position n'est pas encore implémentée.
