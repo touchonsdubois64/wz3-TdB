@@ -66,7 +66,7 @@ function requireText(value, label, max = 20000) {
   return value;
 }
 
-function validatePositionRef(position, label) {
+function validatePositionRef(position, label, gameIds, hasDefaultGame) {
   if (!position || typeof position !== 'object' || Array.isArray(position)) {
     fail(label + ' doit préciser une position.');
   }
@@ -75,19 +75,25 @@ function validatePositionRef(position, label) {
   if (hasFen === hasPath) fail(label + ' doit contenir exactement un FEN ou un chemin UCI.');
   if (hasFen) {
     requireText(position.fen, label + '.fen', 200);
-    const fields = position.fen.trim().split(/\\s+/);
+    const fields = position.fen.trim().split(/\s+/);
     if (fields.length !== 6 || !/^[1-8\/PNBRQKpnbrqk]+$/.test(fields[0])) {
       fail(label + '.fen ne ressemble pas à un FEN valide.');
     }
-    return { fen: position.fen.trim() };
+    return { ...(position.gameId ? { gameId: requireText(position.gameId, label + '.gameId', 100) } : {}), fen: position.fen.trim() };
   }
   if (!position.path.every((move) => typeof move === 'string' && UCI_MOVE.test(move))) {
     fail(label + '.path contient un coup UCI invalide.');
   }
+  if (position.gameId !== undefined) {
+    const gameId = requireText(position.gameId, label + '.gameId', 100);
+    if (!gameIds.has(gameId)) fail(label + ' référence un jeu inconnu : ' + gameId + '.');
+    return { gameId, path: [...position.path] };
+  }
+  if (!hasDefaultGame) fail(label + ' doit préciser gameId pour référencer un jeu.');
   return { path: [...position.path] };
 }
 
-function normalizeCourse(course) {
+function normalizeCourse(course, gameIds, hasDefaultGame) {
   if (!course || typeof course !== 'object' || Array.isArray(course)) fail('course invalide.');
   const title = requireText(course.title, 'course.title', 300);
   if (!Array.isArray(course.chapters) || course.chapters.length === 0) {
@@ -119,7 +125,7 @@ function normalizeCourse(course) {
       } else if (block.type === 'text') {
         normalized.text = requireText(block.text, blockLabel + '.text', 20000);
       } else if (block.type === 'diagram') {
-        normalized.position = validatePositionRef(block.position, blockLabel + '.position');
+        normalized.position = validatePositionRef(block.position, blockLabel + '.position', gameIds, hasDefaultGame);
         if (block.caption !== undefined) normalized.caption = requireText(block.caption, blockLabel + '.caption', 1000);
       } else if (block.type === 'exercise') {
         normalized.prompt = requireText(block.prompt, blockLabel + '.prompt', 5000);
@@ -149,8 +155,22 @@ export function validateXpgnDocument(document) {
   if (!document || typeof document !== 'object' || Array.isArray(document)) fail('document invalide.');
   if (document.format !== XPGN_FORMAT) fail('signature de format absente ou inconnue.');
   if (document.version !== XPGN_VERSION) fail('version non prise en charge : ' + document.version + '.');
-  if (!document.game || typeof document.game.pgn !== 'string' || !document.game.pgn.trim()) {
-    fail('le PGN embarqué est absent.');
+  const hasDefaultGame = document.game !== undefined;
+  if (hasDefaultGame && (typeof document.game.pgn !== 'string' || !document.game.pgn.trim())) {
+    fail('game.pgn doit être un PGN non vide.');
+  }
+  const gameIds = new Set();
+  const games = (document.games || []).map((entry, index) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) fail('jeu ' + index + ' invalide.');
+    const id = requireText(entry.id, 'jeu ' + index + '.id', 100);
+    if (gameIds.has(id)) fail('identifiant de jeu dupliqué : ' + id + '.');
+    gameIds.add(id);
+    const pgn = requireText(entry.pgn, 'jeu ' + index + '.pgn', 1000000);
+    return { id, pgn };
+  });
+  if (document.games !== undefined && !Array.isArray(document.games)) fail('games doit être un tableau.');
+  if (!hasDefaultGame && games.length === 0 && document.course === undefined) {
+    fail('le document doit contenir une partie, une bibliothèque de jeux ou un cours.');
   }
   if (!Array.isArray(document.annotations)) fail('la liste annotations doit être un tableau.');
 
@@ -162,13 +182,10 @@ export function validateXpgnDocument(document) {
     return normalized;
   });
 
-  const normalized = {
-    format: XPGN_FORMAT,
-    version: XPGN_VERSION,
-    game: { pgn: document.game.pgn },
-    annotations,
-  };
-  if (document.course !== undefined) normalized.course = normalizeCourse(document.course);
+  const normalized = { format: XPGN_FORMAT, version: XPGN_VERSION, annotations };
+  if (hasDefaultGame) normalized.game = { pgn: document.game.pgn };
+  if (games.length) normalized.games = games;
+  if (document.course !== undefined) normalized.course = normalizeCourse(document.course, gameIds, hasDefaultGame);
   return normalized;
 }
 
