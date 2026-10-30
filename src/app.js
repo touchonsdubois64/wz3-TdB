@@ -18,6 +18,7 @@ import { Chess } from 'chess.js';
 import { fillLabel, plainLabel, setupLibrary } from './library.js';
 import { parsePgn } from './pgn.js';
 import { setupMarks } from './marks-ui.js';
+import { attachXpgnAnnotations, getXpgnNodePath, parseXpgn, stringifyXpgn } from './xpgn.js';
 import { setupSettings } from './settings.js';
 
 import './style.css';
@@ -251,12 +252,18 @@ function discardSuspendedIfModified() {
 
 // Position choisie dans la bibliothèque : donne accès à ses champs facultatifs « url » (solution) et « marks » (indice)
 let currentLibraryPosition = null;
+let xpgnDirty = false;
 
 const marks = setupMarks({
   layer: $('#marks-layer'),
   panel: $('#marks-panel'),
   buttons: [...document.querySelectorAll('.marks-opener')],
   isWhite: () => ground.state.orientation === 'white',
+  onItemsChange: (items) => {
+    if (!currentNode) return;
+    currentNode.xpgnAnnotations = items;
+    xpgnDirty = true;
+  },
   // position à laquelle se rapportent les annotations téléchargées (bouton « Enregistrer »)
   getExportInfo: () =>
     currentLibraryPosition
@@ -761,6 +768,7 @@ function loadPgn(raw, options = {}) {
     return false;
   }
   currentNode = target;
+  marks.setItems(currentNode.xpgnAnnotations || []);
 
   locked = true;
   document.body.classList.add('locked');
@@ -877,6 +885,7 @@ function changeTrait(turn) {
   }
   currentNode.selectedChild = child;
   currentNode = child;
+  marks.setItems(currentNode.xpgnAnnotations || []);
   child.fen = game.fen();
   afterPosition();
 }
@@ -1097,6 +1106,7 @@ function showNode(node) {
   cancelPromotion();
   if (!rebuildGameToNode(node)) return;
   currentNode = node;
+  marks.setItems(currentNode.xpgnAnnotations || []);
   afterPosition();
 }
 
@@ -2283,7 +2293,7 @@ function downloadPgn() {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = 'winning-zone.pgn';
+  link.download = 'xpgn-studio.pgn';
   document.body.appendChild(link);
   link.click();
   link.remove();
@@ -2448,6 +2458,7 @@ document.querySelectorAll('.shift-btn').forEach((button) => {
 buildPalette();
 setupNotationMenu();
 setupPgnButton();
+setupXpgnControls();
 updateCoordinates();
 updateNavigation();
 updateShiftButtons();
