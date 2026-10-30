@@ -2146,7 +2146,10 @@ function renderSequence(startNode, container, options = {}) {
       const symbols = {1:'!',2:'?',3:'!!',4:'??',5:'!?',6:'?!',10:'=',13:'+=',14:'=+',15:'+−',16:'−+',17:'±',18:'∓'};
       const badge = document.createElement('span');
       badge.className = 'pgn-nags';
-      badge.textContent = nags.map(nag => symbols[nag] || '
+      badge.textContent = nags.map(nag => symbols[nag] || ('NAG ' + nag)).join(' ');
+      container.appendChild(badge);
+    }
+    if (node.note) {
       const note = document.createElement('span');
       note.className = 'pgn-note';
       note.textContent = ' ' + node.note;
