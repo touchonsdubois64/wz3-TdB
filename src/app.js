@@ -772,6 +772,7 @@ function loadPgn(raw, options = {}) {
   if (!options.preserveCourse) {
     currentXpgnCourse = null;
     currentXpgnGames = [];
+    currentXpgnMainPgn = null;
     currentXpgnCourseOnly = false;
   }
   if (!options.fromSolution) currentLibraryPosition = null; // un PGN collé n'est plus la position de la bibliothèque
@@ -2706,7 +2707,8 @@ function setupCourseAuthoring() {
     currentXpgnGames = [];
     currentXpgnCourseOnly = !rootNode;
     close();
-    showMessage('Cours créé. Utilisez le bouton XPGN pour enregistrer le document et son contenu.', 'success', pgnMessage);
+    showCourseReader();
+    showMessage('Cours créé et ouvert. Utilisez le bouton XPGN pour enregistrer le document et son contenu.', 'success', pgnMessage);
   });
 
   const button = document.createElement('button');
