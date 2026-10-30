@@ -211,7 +211,7 @@ export function parsePgn(text, Chess) {
   let endNode = root;
   while (endNode.children.length > 0) endNode = endNode.children[0];
 
-  const meaningful = (value) => value && value !== '?' && value !== 'Winning Zone';
+  const meaningful = (value) => value && value !== '?' && value !== 'Winning Zone' && value !== 'XPGN Studio';
   let title = meaningful(headers.Event) ? headers.Event : null;
   if (!title && meaningful(headers.White) && meaningful(headers.Black)) title = headers.White + ' – ' + headers.Black;
 
