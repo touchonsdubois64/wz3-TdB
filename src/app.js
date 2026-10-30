@@ -2394,7 +2394,8 @@ function openXpgnFile(file) {
         currentXpgnGames = document.games || [];
         currentXpgnCourseOnly = Boolean(currentXpgnCourse);
         if (!currentXpgnCourse) throw new Error('Aucune partie principale ou aucun cours à ouvrir.');
-        showMessage('Cours XPGN chargé et validé. Son affichage et son édition dans Studio arrivent dans une prochaine étape ; vous pouvez déjà le réexporter.', 'info', pgnMessage);
+        showCourseReader();
+        showMessage('Cours XPGN ouvert : vous pouvez parcourir ses chapitres et consulter ses diagrammes.', 'success', pgnMessage);
         return;
       }
       // Un document XPGN doit contenir une partie intégralement lisible.
@@ -2407,10 +2408,11 @@ function openXpgnFile(file) {
       const linked = attachXpgnAnnotations(rootNode, document.annotations);
       marks.setItems(currentNode.xpgnAnnotations || []);
       afterPosition();
+      if (currentXpgnCourse) showCourseReader();
       showMessage(
         'Fichier XPGN ouvert : ' + linked.attached + ' annotation(s) restaurée(s)' +
         (linked.unresolved.length ? ', ' + linked.unresolved.length + ' chemin(s) non retrouvé(s).' : '') +
-        (currentXpgnCourse ? ' Le contenu du cours est conservé pour réexport.' : ''),
+        (currentXpgnCourse ? ' Le cours est également ouvert dans le lecteur.' : ''),
         linked.unresolved.length || currentXpgnCourse ? 'info' : 'success',
         pgnMessage,
       );
@@ -2446,6 +2448,167 @@ function setupXpgnControls() {
   makeButton('Ouvrir XPGN', 'Ouvrir un document .xpgn', () => input.click());
   makeButton('XPGN', 'Télécharger la partie, ses annotations et le cours au format .xpgn', downloadXpgn);
   setupCourseAuthoring();
+  setupCourseReader();
+  setupMoveAnnotations();
+}
+
+
+const COURSE_PIECES = { K:'♔',Q:'♕',R:'♖',B:'♗',N:'♘',P:'♙',k:'♚',q:'♛',r:'♜',b:'♝',n:'♞',p:'♟' };
+let courseReaderDialog = null;
+function courseDiagram(fen) {
+  const placement = String(fen || '').trim().split(/\\s+/)[0];
+  const rows = placement.split('/');
+  if (rows.length !== 8) return null;
+  const board = document.createElement('div');
+  board.className = 'xpgn-course-board';
+  rows.forEach((row, rank) => {
+    let files = [];
+    for (const token of row) {
+      if (/^[1-8]$/.test(token)) files.push(...Array(Number(token)).fill(''));
+      else files.push(token);
+    }
+    if (files.length !== 8) return;
+    files.forEach((piece, file) => {
+      const square = document.createElement('span');
+      square.className = 'xpgn-course-square ' + ((rank + file) % 2 ? 'dark' : 'light');
+      square.textContent = COURSE_PIECES[piece] || '';
+      board.appendChild(square);
+    });
+  });
+  return board;
+}
+function renderCourseChapter(index) {
+  if (!currentXpgnCourse || !courseReaderDialog) return;
+  const course = currentXpgnCourse;
+  const chapter = course.chapters[index] || course.chapters[0];
+  const body = courseReaderDialog.querySelector('.xpgn-course-reader-body');
+  body.innerHTML = '';
+  const heading = document.createElement('h3');
+  heading.textContent = chapter.title;
+  body.appendChild(heading);
+  for (const block of chapter.blocks) {
+    if (block.type === 'heading') {
+      const h = document.createElement('h' + (block.level || 2));
+      h.textContent = block.text;
+      body.appendChild(h);
+    } else if (block.type === 'text') {
+      const p = document.createElement('p');
+      p.className = 'xpgn-course-text';
+      p.textContent = block.text;
+      body.appendChild(p);
+    } else if (block.type === 'diagram' || block.type === 'exercise') {
+      const section = document.createElement('section');
+      section.className = 'xpgn-course-block';
+      if (block.type === 'exercise') {
+        const prompt = document.createElement('p');
+        prompt.textContent = 'Exercice : ' + block.prompt;
+        section.appendChild(prompt);
+      }
+      let fen = block.position && block.position.fen;
+      if (!fen && block.position && block.position.path && block.position.path.length === 0) {
+        fen = currentStartFen || new Chess().fen();
+      }
+      if (fen) {
+        const board = courseDiagram(fen);
+        if (board) section.appendChild(board);
+        const details = document.createElement('details');
+        const summary = document.createElement('summary');
+        summary.textContent = 'Voir le FEN';
+        const code = document.createElement('code');
+        code.textContent = fen;
+        details.append(summary, code);
+        section.appendChild(details);
+      } else {
+        const note = document.createElement('p');
+        note.textContent = 'Cette position est référencée dans une partie intégrée (' + (block.position.gameId || 'partie principale') + '). La navigation vers cette position sera ajoutée dans une prochaine étape.';
+        section.appendChild(note);
+      }
+      if (block.caption) {
+        const caption = document.createElement('p');
+        caption.className = 'xpgn-course-caption';
+        caption.textContent = block.caption;
+        section.appendChild(caption);
+      }
+      if (block.type === 'exercise') {
+        const answer = document.createElement('details');
+        const summary = document.createElement('summary');
+        summary.textContent = 'Afficher la solution';
+        const solution = document.createElement('p');
+        solution.textContent = 'Coups attendus (UCI) : ' + block.expectedMoves.join(' ') + (block.explanation ? ' — ' + block.explanation : '');
+        answer.append(summary, solution);
+        section.appendChild(answer);
+      }
+      body.appendChild(section);
+    }
+  }
+  courseReaderDialog.querySelector('.xpgn-course-chapter-select').value = String(index);
+  courseReaderDialog.querySelector('.xpgn-course-prev').disabled = index <= 0;
+  courseReaderDialog.querySelector('.xpgn-course-next').disabled = index >= course.chapters.length - 1;
+  courseReaderDialog.dataset.chapter = String(index);
+}
+function setupCourseReader() {
+  courseReaderDialog = document.createElement('dialog');
+  courseReaderDialog.className = 'xpgn-course-reader';
+  courseReaderDialog.innerHTML = `
+    <div class="xpgn-course-reader-head"><div><h2 class="xpgn-course-reader-title"></h2><p class="xpgn-course-reader-description"></p></div><button type="button" class="xpgn-course-close" aria-label="Fermer">×</button></div>
+    <label>Chapitre <select class="xpgn-course-chapter-select"></select></label>
+    <article class="xpgn-course-reader-body"></article>
+    <div class="xpgn-course-reader-actions"><button type="button" class="xpgn-course-prev">Précédent</button><button type="button" class="xpgn-course-next">Suivant</button><button type="button" class="xpgn-course-close">Fermer</button></div>`;
+  document.body.appendChild(courseReaderDialog);
+  const select = courseReaderDialog.querySelector('select');
+  select.addEventListener('change', () => renderCourseChapter(Number(select.value)));
+  courseReaderDialog.querySelector('.xpgn-course-prev').addEventListener('click', () => renderCourseChapter(Math.max(0, Number(courseReaderDialog.dataset.chapter || 0) - 1)));
+  courseReaderDialog.querySelector('.xpgn-course-next').addEventListener('click', () => renderCourseChapter(Math.min(currentXpgnCourse.chapters.length - 1, Number(courseReaderDialog.dataset.chapter || 0) + 1)));
+  courseReaderDialog.querySelectorAll('.xpgn-course-close').forEach(button => button.addEventListener('click', () => courseReaderDialog.close()));
+}
+function showCourseReader() {
+  if (!currentXpgnCourse || !courseReaderDialog) return;
+  const course = currentXpgnCourse;
+  courseReaderDialog.querySelector('.xpgn-course-reader-title').textContent = course.title;
+  courseReaderDialog.querySelector('.xpgn-course-reader-description').textContent = course.description || '';
+  const select = courseReaderDialog.querySelector('select');
+  select.innerHTML = '';
+  course.chapters.forEach((chapter, index) => {
+    const option = document.createElement('option');
+    option.value = String(index);
+    option.textContent = chapter.title;
+    select.appendChild(option);
+  });
+  renderCourseChapter(0);
+  if (!courseReaderDialog.open) courseReaderDialog.showModal();
+}
+const MOVE_NAGS = [
+  {nag:1,label:'! Bon coup'},{nag:2,label:'? Mauvais coup'},{nag:3,label:'!! Coup brillant'},
+  {nag:4,label:'?? Grosse erreur'},{nag:5,label:'!? Coup intéressant'},{nag:6,label:'?! Coup douteux'},
+  {nag:10,label:'= Égalité'},{nag:13,label:'+= Avantage blanc'},{nag:14,label:'=+ Avantage noir'},
+  {nag:15,label:'∓ Avantage noir (léger)'},{nag:16,label:'± Avantage blanc (léger)'},
+  {nag:17,label:'+− Gain blanc'},{nag:18,label:'−+ Gain noir'}
+];
+function setupMoveAnnotations() {
+  const add = (label, title, action) => {
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'export-pgn-button xpgn-action-button';
+    button.textContent = label; button.title = title; button.addEventListener('click', action);
+    $('.notation-control').append(button);
+  };
+  add('Commentaire', 'Ajouter ou modifier le commentaire du coup ou de la position sélectionnée', () => {
+    if (!currentNode) { showMessage('Sélectionnez une partie ou une position avant d’ajouter un commentaire.', 'info', pgnMessage); return; }
+    const value = window.prompt('Commentaire associé à cette position :', currentNode.note || '');
+    if (value === null) return;
+    currentNode.note = value.trim();
+    updateMoves();
+    afterPosition();
+  });
+  add('Symbole', 'Ajouter un symbole de commentaire échiquéen standard au coup sélectionné', () => {
+    if (!currentNode || !currentNode.parent) { showMessage('Sélectionnez un coup dans la notation pour lui associer un symbole.', 'info', pgnMessage); return; }
+    const choices = MOVE_NAGS.map(item => item.nag + ' — ' + item.label).join('\\n');
+    const answer = window.prompt('Numéro du symbole à ajouter :\\n' + choices, String((currentNode.nags || [])[0] || 1));
+    if (answer === null) return;
+    const nag = Number(answer.trim());
+    if (!MOVE_NAGS.some(item => item.nag === nag)) { showMessage('Symbole inconnu. Choisissez un numéro de la liste.', 'error', pgnMessage); return; }
+    currentNode.nags = [...new Set([...(currentNode.nags || []), nag])];
+    updateMoves();
+  });
 }
 
 function setupCourseAuthoring() {
