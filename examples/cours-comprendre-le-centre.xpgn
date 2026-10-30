@@ -1,0 +1,48 @@
+{
+  "format": "XPGN",
+  "version": 1,
+  "annotations": [],
+  "course": {
+    "title": "Comprendre le centre",
+    "description": "Un premier exemple de cours autonome au format XPGN.",
+    "author": "XPGN Studio",
+    "language": "fr",
+    "chapters": [
+      {
+        "id": "chapitre-1",
+        "title": "Pourquoi contrôler le centre ?",
+        "blocks": [
+          {
+            "id": "intro",
+            "type": "heading",
+            "text": "Les quatre cases centrales",
+            "level": 2
+          },
+          {
+            "id": "explication",
+            "type": "text",
+            "text": "Le contrôle des cases e4, d4, e5 et d5 facilite le développement des pièces et donne davantage d'espace. Il ne s'agit pas toujours d'occuper le centre avec des pions : on peut aussi le contrôler à distance avec les pièces."
+          },
+          {
+            "id": "position-initiale",
+            "type": "diagram",
+            "position": {
+              "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+            },
+            "caption": "La position de départ."
+          },
+          {
+            "id": "exercice-e4",
+            "type": "exercise",
+            "prompt": "Quel coup de pion blanc occupe immédiatement une case centrale et attaque d5 ?",
+            "position": {
+              "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+            },
+            "expectedMoves": ["e2e4"],
+            "explanation": "1. e4 occupe le centre et contrôle notamment d5 et f5."
+          }
+        ]
+      }
+    ]
+  }
+}
