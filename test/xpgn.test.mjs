@@ -92,3 +92,56 @@ test('le format XPGN conserve les familles d’annotations de l’éditeur', () 
     new Set(items.map((item) => item.type)),
   );
 });
+
+
+const startFen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+const courseOnly = () => ({
+  format: 'XPGN',
+  version: 1,
+  course: {
+    title: 'Comprendre le centre',
+    description: 'Un premier cours autonome.',
+    language: 'fr',
+    chapters: [{
+      id: 'chapitre-1',
+      title: 'Occupation du centre',
+      blocks: [
+        { id: 'intro', type: 'heading', text: 'Les cases centrales', level: 2 },
+        { id: 'texte', type: 'text', text: 'Le contrôle du centre facilite le développement.' },
+        { id: 'diagramme', type: 'diagram', position: { fen: startFen }, caption: 'Position de départ' },
+        { id: 'exercice', type: 'exercise', prompt: 'Jouez le coup e4.', position: { fen: startFen }, expectedMoves: ['e2e4'], explanation: 'Le pion occupe le centre.' },
+      ],
+    }],
+  },
+});
+
+test('un cours XPGN autonome peut contenir texte, diagrammes et exercices', () => {
+  const parsed = parseXpgn(stringifyXpgn(courseOnly()));
+  assert.equal(parsed.game, undefined);
+  assert.equal(parsed.course.title, 'Comprendre le centre');
+  assert.equal(parsed.course.chapters[0].blocks.length, 4);
+  assert.equal(parsed.course.chapters[0].blocks[2].position.fen, startFen);
+  assert.deepEqual(parsed.course.chapters[0].blocks[3].expectedMoves, ['e2e4']);
+});
+
+test('un cours peut référencer plusieurs parties PGN intégrées', () => {
+  const doc = courseOnly();
+  doc.games = [{ id: 'partie-italienne', pgn: '1. e4 e5 2. Nf3 Nc6 *' }];
+  doc.course.chapters[0].blocks[2].position = { gameId: 'partie-italienne', path: ['e2e4', 'e7e5'] };
+  const parsed = parseXpgn(stringifyXpgn(doc));
+  assert.equal(parsed.games[0].id, 'partie-italienne');
+  assert.deepEqual(parsed.course.chapters[0].blocks[2].position.path, ['e2e4', 'e7e5']);
+});
+
+test('le validateur refuse les références de jeu et les identifiants de bloc inconnus ou dupliqués', () => {
+  const doc = courseOnly();
+  doc.course.chapters[0].blocks[0].id = 'duplicate';
+  doc.course.chapters[0].blocks[1].id = 'duplicate';
+  assert.throws(() => validateXpgnDocument(doc), /dupliqué/);
+  const badRef = courseOnly();
+  badRef.course.chapters[0].blocks[2].position = { gameId: 'absent', path: [] };
+  assert.throws(() => validateXpgnDocument(badRef), /jeu inconnu/);
+  const badMoves = courseOnly();
+  badMoves.course.chapters[0].blocks[3].expectedMoves = ['e2-e4'];
+  assert.throws(() => validateXpgnDocument(badMoves), /coups UCI invalide/);
+});
