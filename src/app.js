@@ -1,5 +1,5 @@
 // ==================================================
-// WINNING ZONE — application
+// XPGN STUDIO — application
 // ==================================================
 //
 // Reprend de cc2 : Chessground + chess.js, arbre de coups avec variantes,
@@ -2270,7 +2270,7 @@ function exportPgnLine(node, ply) {
 }
 
 function buildPgn() {
-  let pgn = '[Event "' + escapePgnValue(positionTitle || 'Winning Zone') + '"]\n[Site "Winning Zone"]\n';
+  let pgn = '[Event "' + escapePgnValue(positionTitle || 'XPGN Studio') + '"]\n[Site "XPGN Studio"]\n';
   if (currentStartFen) pgn += '[FEN "' + escapePgnValue(currentStartFen) + '"]\n[SetUp "1"]\n';
   pgn += '[Result "*"]\n\n';
   if (rootNode && pgnComment(rootNode)) pgn += pgnComment(rootNode).trim() + ' ';
