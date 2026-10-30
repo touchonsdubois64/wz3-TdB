@@ -2289,7 +2289,8 @@ function pgnComment(node) {
 function exportPgnLine(node, ply) {
   if (!node) return '';
   const nags = (node.nags || []).filter((nag) => Number.isInteger(nag) && nag >= 0 && nag <= 255);
-  let text = getPgnMoveText(node, ply) + (nags.length ? ' ' + nags.map((nag) => '
+  let text = getPgnMoveText(node, ply) + (nags.length ? ' ' + nags.map((nag) => '$' + nag).join(' ') : '') + pgnComment(node);
+  const main = getMainChild(node);
   for (const alternative of node.children.filter((child) => child !== main)) {
     const variation = exportPgnLine(alternative, ply + 1);
     if (variation) text += ' (' + variation + ')';
