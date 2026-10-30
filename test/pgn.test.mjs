@@ -117,3 +117,15 @@ test('commentaire dans une variante', () => {
   assert.equal(c5.note, 'Sicilienne');
   assert.deepEqual(c5.shapes, [{ orig: 'c5', brush: 'red' }]);
 });
+
+
+test('conserve les NAG et les directives PGN non graphiques', () => {
+  const r = parsePgn('1. e4 $1 {[%eval 0.35] [%clk 0:04:12] bonne idée} e5 $6 (1... c5 $5) 2. Nf3 *', Chess);
+  assert.equal(r.error, null);
+  const e4 = r.root.children[0];
+  assert.deepEqual(e4.nags, [1]);
+  assert.deepEqual(e4.directives, ['eval 0.35', 'clk 0:04:12']);
+  assert.equal(e4.note, 'bonne idée');
+  assert.deepEqual(e4.children[0].nags, [6]);
+  assert.deepEqual(e4.children[1].nags, [5]);
+});
