@@ -10,5 +10,6 @@
     "test": "node --test test/fen.test.mjs test/pgn.test.mjs test/marks.test.mjs",
     "dev": "vite",
     "build": "vite build"
-  }
+  },
+  "name": "xpgn-studio"
 }
