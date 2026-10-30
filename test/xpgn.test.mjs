@@ -63,3 +63,32 @@ test('refuse les identifiants dupliqués', () => {
   const item = { id: 'same', at: { path: [] }, items: [{ type: 'shape', value: 'circle', color: 'rouge', key: 'e4' }] };
   assert.throws(() => validateXpgnDocument(sample([item, item])), /dupliqué/);
 });
+
+
+test('le format XPGN conserve les familles d’annotations de l’éditeur', () => {
+  const items = [
+    { type: 'shape', value: 'star', color: 'rouge', key: 'e4' },
+    { type: 'text', value: 'sym:+', color: 'bleu', key: 'd5' },
+    { type: 'text', value: '12', color: 'vert', key: 'c4' },
+    { type: 'label', value: 'plan A', color: 'violet', key: 'f6' },
+    { type: 'piece', value: 'K:b', color: 'noir', key: 'g2' },
+    { type: 'border', value: '', color: 'orange', key: 'a1' },
+    { type: 'zone', value: '', color: 'jaune', key: 'a2' },
+    { type: 'fill', value: '', color: 'cyan', key: 'a3' },
+    { type: 'hatch', value: '', color: 'rose', key: 'a4' },
+    { type: 'line', color: 'rouge', from: 'a1', to: 'a8' },
+    { type: 'dline', color: 'bleu', from: 'b1', to: 'b8' },
+    { type: 'arrow', color: 'vert', from: 'c1', to: 'c8' },
+    { type: 'darrow', color: 'violet', from: 'd1', to: 'd8' },
+    { type: 'arrow2', color: 'orange', from: 'e1', to: 'e8' },
+    { type: 'darrow2', color: 'rose', from: 'f1', to: 'f8' },
+  ];
+  const parsed = parseXpgn(stringifyXpgn(sample([{
+    at: { path: [] }, items,
+  }])));
+  assert.equal(parsed.annotations[0].items.length, items.length);
+  assert.deepEqual(
+    new Set(parsed.annotations[0].items.map((item) => item.type)),
+    new Set(items.map((item) => item.type)),
+  );
+});
