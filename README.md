@@ -1,6 +1,6 @@
-# Winning Zone
+# XPGN Studio
 
-Interface d'entraînement aux finales, dérivée de cc2.
+Application d’analyse et d’entraînement aux échecs, première base de travail du projet XPGN Studio.
 
     npm install
     npm run dev      # développement
