@@ -58,7 +58,7 @@ la partie et les annotations de tous les nœuds dans un document `.xpgn`.
 
 
 
-L'import/export PGN conserve également les commentaires textuels, les variantes, les NAG (`$n`) et les directives non graphiques reconnues comme `[%eval]` et `[%clk]`. La compatibilité reste sémantique, pas octet pour octet, pour les PGN arbitraires.
+Les commandes **Commentaire** et **Symbole** permettent d'ajouter un commentaire textuel au nœud sélectionné et les symboles échiquéens standards (`!`, `?`, `!!`, `??`, `!?`, `?!`, `=`, `+=`, `=+`, `+−`, `−+`, `±`, `∓`). Ils sont exportés en PGN sous forme de commentaires et de NAG (`$n`). L'import/export PGN conserve également les variantes et les directives non graphiques reconnues comme `[%eval]` et `[%clk]`. La compatibilité reste sémantique, pas octet pour octet, pour les PGN arbitraires.
 
 Cette intégration est encore expérimentale : les annotations XPGN sont attachées
 à une position précise (pas encore de durée ou de propagation automatique), et
