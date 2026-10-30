@@ -2491,9 +2491,16 @@ function setupCourseAuthoring() {
   form.addEventListener('submit', (event) => {
     event.preventDefault();
     const data = new FormData(form);
+    const title = String(data.get('title') || '').trim();
+    const chapterTitle = String(data.get('chapter') || '').trim();
+    const explanation = String(data.get('text') || '').trim();
+    if (!title || !chapterTitle || !explanation) {
+      showMessage('Le titre du cours, le titre du chapitre et l’explication sont obligatoires.', 'error', pgnMessage);
+      return;
+    }
     const blocks = [
       { id: 'introduction', type: 'heading', text: 'Introduction', level: 2 },
-      { id: 'explication', type: 'text', text: String(data.get('text') || '').trim() },
+      { id: 'explication', type: 'text', text: explanation },
     ];
     if (data.get('diagram') && rootNode && currentNode) {
       blocks.push({
@@ -2504,12 +2511,12 @@ function setupCourseAuthoring() {
       });
     }
     currentXpgnCourse = {
-      title: String(data.get('title')).trim(),
+      title,
       description: String(data.get('description') || '').trim() || undefined,
       language: 'fr',
       chapters: [{
         id: 'chapitre-1',
-        title: String(data.get('chapter')).trim(),
+        title: chapterTitle,
         blocks,
       }],
     };
