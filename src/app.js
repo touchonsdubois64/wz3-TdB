@@ -759,7 +759,7 @@ function loadPgn(raw, options = {}) {
   }
 
   const result = parsePgn(text, Chess);
-  if (!result.root) {
+  if (!result.root || (options.strict && result.error)) {
     pgnInput.classList.add('invalid');
     showMessage(result.error || 'PGN illisible.', 'error', pgnMessage);
     return false;
@@ -2370,7 +2370,11 @@ function openXpgnFile(file) {
   reader.onload = () => {
     try {
       const document = parseXpgn(reader.result);
-      if (!loadPgn(document.game.pgn)) throw new Error('La partie intégrée n’a pas pu être chargée.');
+      // Un document XPGN doit contenir une partie intégralement lisible :
+      // contrairement au collage PGN classique, on refuse tout arbre partiel.
+      if (!loadPgn(document.game.pgn, { strict: true })) {
+        throw new Error('La partie PGN intégrée est invalide ou incomplète.');
+      }
       const linked = attachXpgnAnnotations(rootNode, document.annotations);
       marks.setItems(currentNode.xpgnAnnotations || []);
       afterPosition();
