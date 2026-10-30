@@ -10,27 +10,57 @@ Statut : première base technique expérimentale. Cette spécification est volon
 - Signature obligatoire : `"format": "XPGN"`.
 - Version obligatoire : `"version": 1`.
 
-## 2. Structure minimale
+## 2. Structure du document
+
+Un document XPGN peut contenir :
+- `game` : une partie principale PGN (facultative si le document est un cours autonome).
+- `games` : une bibliothèque de parties PGN intégrées, chacune avec un identifiant stable.
+- `annotations` : annotations graphiques rattachées à des positions de la partie principale.
+- `course` : contenu pédagogique structuré en chapitres et blocs.
+
+Les anciennes structures avec `game` et `annotations` restent valides. Un cours autonome peut omettre `game` et utiliser des diagrammes fondés sur un FEN.
+
+Exemple de document de cours autonome :
 
 ```json
 {
   "format": "XPGN",
   "version": 1,
-  "game": {
-    "pgn": "[Event \"Exemple\"]\n\n1. e4 e5 *"
-  },
-  "annotations": [
-    {
-      "id": "idee-principale",
-      "at": { "path": ["e2e4", "e7e5"] },
-      "scope": { "branch": "node", "durationPlies": 0 },
-      "items": [
-        { "type": "shape", "value": "circle", "color": "rouge", "key": "f7" }
-      ]
-    }
-  ]
+  "annotations": [],
+  "course": {
+    "title": "Comprendre le centre",
+    "description": "Les principes de base du jeu central.",
+    "language": "fr",
+    "chapters": [
+      {
+        "id": "chapitre-1",
+        "title": "Occupation du centre",
+        "blocks": [
+          { "id": "intro", "type": "heading", "text": "Les cases centrales", "level": 2 },
+          { "id": "explication", "type": "text", "text": "Le contrôle du centre facilite le développement." },
+          {
+            "id": "diagramme-1",
+            "type": "diagram",
+            "position": { "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1" },
+            "caption": "Position de départ"
+          },
+          {
+            "id": "exercice-1",
+            "type": "exercise",
+            "prompt": "Jouez le coup qui occupe le centre avec le pion roi.",
+            "position": { "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1" },
+            "expectedMoves": ["e2e4"],
+            "explanation": "Le pion contrôle les cases d5 et f5."
+          }
+        ]
+      }
+    ]
+  }
 }
+
 ```
+
+Un bloc `diagram` ou `exercise` référence une position par `fen` ou par `path` UCI. Un `gameId` peut préciser la partie de la bibliothèque à utiliser. Les blocs pris en charge dans cette première extension sont `heading`, `text`, `diagram` et `exercise`.
 
 ## 3. Partie d'échecs
 
@@ -70,4 +100,4 @@ En v1, `branch` vaut obligatoirement `"node"` et l'annotation ne s'affiche que s
 
 ## 7. Évolutions réservées
 
-Les futures versions pourront définir les couches, les portées de branches (ligne principale, branche courante, descendants), la durée effective, les phases avant/après le coup, les métadonnées de cours, les chapitres, les exercices et les médias. Ces éléments ne sont pas implicitement activés par la version 1.
+Les futures versions pourront définir les couches, les portées de branches (ligne principale, branche courante, descendants), la durée effective, les phases avant/après le coup, les médias, les ressources externes et les interactions pédagogiques avancées. Ces éléments ne sont pas implicitement activés par la version 1.
