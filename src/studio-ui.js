@@ -100,7 +100,7 @@ const initStudioUi = () => {
   // Analyse et annotations graphiques : on déplace les éléments existants, sans les recréer.
   take('.right', 'analysis');
   take('#marks-panel', 'annotations');
-  const marksOpener = document.querySelector('.marks-opener');
+  const marksOpener = document.querySelector('.marks-opener.landscape-only') || document.querySelector('.marks-opener');
   put('annotations', marksOpener);
 
   // Les actions ont quitté leur ancienne ligne de notation.
@@ -166,8 +166,10 @@ const initStudioUi = () => {
   }
 };
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initStudioUi, { once: true });
-} else {
+// Attendre que app.js ait créé les boutons dynamiques (cours, commentaires,
+// symboles, import/export) avant de répartir les commandes dans les panneaux.
+if (document.readyState === 'complete') {
   initStudioUi();
+} else {
+  window.addEventListener('load', initStudioUi, { once: true });
 }
