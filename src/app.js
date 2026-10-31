@@ -2402,26 +2402,47 @@ function buildXpgnDocument() {
   return document;
 }
 
-function downloadXpgn() {
+async function downloadXpgn() {
   if ((!rootNode || !locked) && !currentXpgnCourse) {
     showMessage('Chargez une partie ou un cours avant l’export XPGN.', 'info');
     return;
   }
   try {
     const content = stringifyXpgn(buildXpgnDocument());
+    const documentTitle = currentXpgnCourse && currentXpgnCourse.title ? currentXpgnCourse.title : (positionTitle || 'partie');
+    const safeName = documentTitle.normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 70) || 'partie';
+    const filename = safeName + '.xpgn';
+
+    // Sur les navigateurs compatibles, laisser l'utilisateur choisir son dossier
+    // de projet et écrire directement le fichier. Sinon, téléchargement classique.
+    if (typeof window.showSaveFilePicker === 'function') {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: filename,
+        types: [{
+          description: 'Document XPGN',
+          accept: { 'application/vnd.xpgn+json': ['.xpgn'] },
+        }],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(new Blob([content], { type: 'application/vnd.xpgn+json;charset=utf-8' }));
+      await writable.close();
+      showMessage('Document XPGN enregistré : ' + filename, 'success', pgnMessage);
+      return;
+    }
+
     const blob = new Blob([content], { type: 'application/vnd.xpgn+json;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    const documentTitle = currentXpgnCourse && currentXpgnCourse.title ? currentXpgnCourse.title : (positionTitle || 'partie');
-    const safeName = documentTitle.normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 70) || 'partie';
-    link.download = safeName + '.xpgn';
+    link.download = filename;
     document.body.appendChild(link);
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
+    showMessage('Téléchargement XPGN lancé : ' + filename, 'success', pgnMessage);
   } catch (error) {
-    showMessage('Export XPGN impossible : ' + error.message, 'error');
+    if (error && error.name === 'AbortError') return;
+    showMessage('Export XPGN impossible : ' + error.message, 'error', pgnMessage);
   }
 }
 
