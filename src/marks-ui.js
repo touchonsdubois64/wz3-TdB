@@ -25,7 +25,7 @@ import {
   renderSvg,
 } from './marks.js';
 
-const asset = (path) => new URL(path, document.baseURI).href;
+const asset = (path) => new URL(import.meta.env.DEV ? 'docs/' + path : path, document.baseURI).href;
 
 // Pictogrammes des groupes d'outils
 const PICT = {
@@ -77,8 +77,8 @@ export function setupMarks({ layer, panel, buttons, isWhite, onActiveChange, onI
   const marks = createMarkSet();
   let hintItems = []; // annotations enregistrées avec la position (positions.js), affichées à la demande
   let hintShown = false;
-  let saveButton = null;
   let active = false;
+  let collapsed = false;
   let colorId = 'rouge';
   let tool = { type: 'shape', value: 'circle', round: false };
   let previousTool = tool; // pour revenir de la gomme
@@ -94,7 +94,7 @@ export function setupMarks({ layer, panel, buttons, isWhite, onActiveChange, onI
   function render() {
     // l'indice est dessiné en dessous des annotations tracées à la main
     layer.innerHTML = renderSvg(hintShown ? [...hintItems, ...marks.items] : marks.items, isWhite(), arrowStart);
-    if (saveButton) saveButton.disabled = marks.isEmpty();
+
   }
 
   /** Fichier .txt : titre, FEN, code des annotations et la ligne à coller dans positions.js. */
@@ -136,6 +136,7 @@ export function setupMarks({ layer, panel, buttons, isWhite, onActiveChange, onI
 
   // ---- construction de la barre d'outils
   panel.innerHTML = '';
+  panel.hidden = false;
   const addRow = (className, parent = panel) => {
     const row = document.createElement('div');
     row.className = 'marks-row ' + className;
@@ -152,8 +153,24 @@ export function setupMarks({ layer, panel, buttons, isWhite, onActiveChange, onI
     return element;
   };
 
-  // 1. couleurs
+  // En-tête permanent : les couleurs restent visibles même lorsque la palette est repliée.
   const colorsRow = addRow('marks-colors');
+  const collapseButton = document.createElement('button');
+  collapseButton.type = 'button';
+  collapseButton.className = 'marks-collapse';
+  collapseButton.title = 'Replier la palette';
+  collapseButton.setAttribute('aria-label', 'Replier la palette');
+  collapseButton.setAttribute('aria-expanded', 'true');
+  collapseButton.textContent = '⌃';
+  collapseButton.addEventListener('click', () => {
+    collapsed = !collapsed;
+    panel.classList.toggle('collapsed', collapsed);
+    collapseButton.textContent = collapsed ? '⌄' : '⌃';
+    collapseButton.title = collapsed ? 'Déployer la palette' : 'Replier la palette';
+    collapseButton.setAttribute('aria-label', collapseButton.title);
+    collapseButton.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+  });
+  colorsRow.appendChild(collapseButton);
   for (const color of COLORS) {
     const element = document.createElement('button');
     element.type = 'button';
@@ -286,7 +303,7 @@ export function setupMarks({ layer, panel, buttons, isWhite, onActiveChange, onI
     group.appendChild(hint);
   }
 
-  // 5. pied de barre : gomme et « effacer tout » en bas à gauche, enregistrement en bas à droite
+  // Pied de barre : gomme et « effacer tout », alignés à gauche.
   const footer = addRow('marks-footer');
   const footerLeft = document.createElement('div');
   footerLeft.className = 'marks-footer-left';
@@ -302,14 +319,7 @@ export function setupMarks({ layer, panel, buttons, isWhite, onActiveChange, onI
   });
   footerLeft.appendChild(eraserButton);
   addButton(footerLeft, 'marks-tab', 'Effacer tout', () => api.clear());
-  saveButton = document.createElement('button');
-  saveButton.type = 'button';
-  saveButton.className = 'marks-tab marks-save';
-  saveButton.title = 'Enregistrer les annotations dans un fichier .txt (titre, FEN et code à coller dans positions.js)';
-  saveButton.innerHTML =
-    '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v9m0 0-3.5-3.5M10 12l3.5-3.5M4 15.5h12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Enregistrer</span>';
-  saveButton.addEventListener('click', saveMarks);
-  footer.appendChild(saveButton);
+
 
   showGroup('formes');
   refreshButtons();
@@ -341,7 +351,7 @@ export function setupMarks({ layer, panel, buttons, isWhite, onActiveChange, onI
     setActive(value) {
       if (value === active) return;
       active = value;
-      panel.hidden = !active;
+      panel.hidden = false;
       for (const button of buttons) {
         button.classList.toggle('active', active);
         button.setAttribute('aria-pressed', active ? 'true' : 'false');
