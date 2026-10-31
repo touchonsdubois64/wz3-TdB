@@ -871,6 +871,7 @@ html[data-theme="dark"] .settings-swatch { border-color: #aaa; }
 }
 .xpgn-course-dialog::backdrop { background: rgba(0, 0, 0, .58); }
 .xpgn-course-form { display: grid; gap: 13px; padding: 18px; overflow-y: auto; }
+.xpgn-course-form [hidden] { display: none !important; }
 .xpgn-course-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .xpgn-course-head h2 { margin: 0; font-size: 1.15rem; }
 .xpgn-course-form label { display: grid; gap: 5px; font-size: .88rem; font-weight: 600; }
