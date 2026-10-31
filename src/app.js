@@ -22,6 +22,8 @@ import { attachXpgnAnnotations, getXpgnNodePath, parseXpgn, stringifyXpgn } from
 import { setupSettings } from './settings.js';
 
 import './style.css';
+import './studio-ui.css';
+import './studio-ui.js';
 import {
   EMPTY_PLACEMENT,
   buildFen,
