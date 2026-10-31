@@ -229,3 +229,17 @@ export function parsePgn(text, Chess) {
 
   return { root, startFen: root.fen, hasFen, endNode, moveCount, headers, title, error };
 }
+
+/** Resolve an exact UCI path from the PGN root; 0000 denotes a null move. */
+export function findPgnNodeByPath(root, path = []) {
+  let node = root;
+  for (const uci of path) {
+    if (!node) return null;
+    node = (node.children || []).find((child) => {
+      if (!child.move) return false;
+      if (uci === '0000') return Boolean(child.move.nullMove);
+      return !child.move.nullMove && child.move.from + child.move.to + (child.move.promotion || '') === uci;
+    }) || null;
+  }
+  return node;
+}
