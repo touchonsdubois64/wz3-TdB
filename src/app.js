@@ -2727,6 +2727,7 @@ function setupMoveAnnotations() {
   });
 
   add('Commentaire', 'Rédiger un commentaire multilignes sur la position sélectionnée', () => {
+    commentDialog.querySelector('h2').textContent = 'Commentaire de la position';
     if (!currentNode) {
       showMessage('Sélectionnez une partie ou une position avant d’ajouter un commentaire.', 'info', pgnMessage);
       return;
@@ -2752,11 +2753,553 @@ function setupMoveAnnotations() {
   document.body.appendChild(nagDialog);
   const nagForm = nagDialog.querySelector('form');
   const nagSelect = nagForm.elements.namedItem('nag');
-  for (const item of MOVE_NAGS) {
-    const option = document.createElement('option');
-    option.value = String(item.nag);
-    option.textContent = '$' + item.nag + ' — ' + item.label;
-    nagSelect.appendChild(option);
+  const nagGroups = [
+    { label: 'Critiques de coups', min: 1, max: 9 },
+    { label: 'Évaluations de position', min: 10, max: 23 },
+    { label: 'Espace et développement', min: 24, max: 35 },
+    { label: 'Initiative et attaque', min: 36, max: 41 },
+    { label: 'Compensation matérielle', min: 42, max: 47 },
+  ];
+  for (const group of nagGroups) {
+    const optgroup = document.createElement('optgroup');
+    optgroup.label = group.label;
+    for (const item of MOVE_NAGS.filter((entry) => entry.nag >= group.min && entry.nag <= group.max)) {
+      const option = document.createElement('option');
+      option.value = String(item.nag);
+      option.textContent = '
+  const closeNag = () => nagDialog.close();
+  nagDialog.querySelector('.xpgn-course-close').addEventListener('click', closeNag);
+  nagDialog.querySelector('.xpgn-nag-cancel').addEventListener('click', closeNag);
+  nagForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    if (!annotationTargetNode || !annotationTargetNode.parent) return;
+    const nag = Number(nagSelect.value);
+    annotationTargetNode.nags = [...new Set([...(annotationTargetNode.nags || []), nag])];
+    updateMoves();
+    closeNag();
+  });
+  nagDialog.querySelector('.xpgn-nag-remove').addEventListener('click', () => {
+    if (!annotationTargetNode || !annotationTargetNode.parent) return;
+    const nag = Number(nagSelect.value);
+    annotationTargetNode.nags = (annotationTargetNode.nags || []).filter((value) => value !== nag);
+    updateMoves();
+    closeNag();
+  });
+
+  add('Symbole', 'Choisir un symbole d’évaluation PGN pour le coup sélectionné', () => {
+    if (!currentNode || !currentNode.parent) {
+      showMessage('Sélectionnez un coup dans la notation pour lui associer un symbole.', 'info', pgnMessage);
+      return;
+    }
+    annotationTargetNode = currentNode;
+    nagSelect.value = String((annotationTargetNode.nags || [])[0] || 1);
+    nagDialog.showModal();
+  });
+
+  // Menu contextuel : commentaire avant/après le coup, ou symbole NAG.
+  const moveMenu = document.createElement('div');
+  moveMenu.className = 'xpgn-move-context';
+  moveMenu.hidden = true;
+  moveMenu.setAttribute('role', 'menu');
+  moveMenu.innerHTML = `
+    <button type="button" role="menuitem" data-action="before">Commenter avant ce coup</button>
+    <button type="button" role="menuitem" data-action="after">Commenter après ce coup</button>
+    <button type="button" role="menuitem" data-action="nag">Ajouter un symbole…</button>`;
+  document.body.appendChild(moveMenu);
+  let contextNode = null;
+  const hideMoveMenu = () => { moveMenu.hidden = true; contextNode = null; };
+  moveMenu.addEventListener('click', event => {
+    const action = event.target.closest('button')?.dataset.action;
+    if (!action || !contextNode) return;
+    const node = contextNode;
+    hideMoveMenu();
+    if (action === 'before' || action === 'after') {
+      annotationTargetNode = action === 'before' ? (node.parent || node) : node;
+      commentDialog.querySelector('h2').textContent = action === 'before'
+        ? 'Commentaire avant le coup'
+        : 'Commentaire après le coup';
+      commentText.value = annotationTargetNode.note || '';
+      commentDialog.showModal();
+      commentText.focus();
+    } else if (action === 'nag') {
+      if (!node.parent) return;
+      annotationTargetNode = node;
+      nagSelect.value = String((node.nags || [])[0] || 1);
+      nagDialog.showModal();
+    }
+  });
+  $('#moves').addEventListener('contextmenu', event => {
+    if (event.target.closest('.move-text') || !currentNode) return;
+    event.preventDefault();
+    document.dispatchEvent(new CustomEvent('xpgn:move-context', {
+      detail: { node: currentNode, x: event.clientX, y: event.clientY },
+    }));
+  });
+  document.addEventListener('xpgn:move-context', event => {
+    const node = event.detail && event.detail.node;
+    if (!node) return;
+    contextNode = node;
+    moveMenu.hidden = false;
+    const width = moveMenu.offsetWidth || 240;
+    const height = moveMenu.offsetHeight || 130;
+    moveMenu.style.left = Math.max(8, Math.min(event.detail.x, window.innerWidth - width - 8)) + 'px';
+    moveMenu.style.top = Math.max(8, Math.min(event.detail.y, window.innerHeight - height - 8)) + 'px';
+  });
+  document.addEventListener('pointerdown', event => {
+    if (!moveMenu.hidden && !moveMenu.contains(event.target)) hideMoveMenu();
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') hideMoveMenu();
+  });
+}
+
+function setupCourseAuthoring() {
+  const dialog = document.createElement('dialog');
+  dialog.className = 'xpgn-course-dialog';
+  dialog.innerHTML = `
+    <form class="xpgn-course-form">
+      <div class="xpgn-course-head">
+        <h2>Créer un cours XPGN</h2>
+        <button type="button" class="xpgn-course-close" aria-label="Fermer">×</button>
+      </div>
+      <label>Titre du cours
+        <input name="title" required maxlength="300" value="Nouveau cours d’échecs">
+      </label>
+      <label>Description
+        <textarea name="description" rows="2" maxlength="5000" placeholder="Quel est l’objectif de ce cours ?"></textarea>
+      </label>
+      <label>Titre du premier chapitre
+        <input name="chapter" required maxlength="300" value="Introduction">
+      </label>
+      <label>Explication
+        <textarea name="text" rows="5" maxlength="20000" required placeholder="Rédigez votre explication…"></textarea>
+      </label>
+      <label class="xpgn-course-check">
+        <input name="diagram" type="checkbox" checked>
+        Ajouter la position actuellement affichée comme diagramme
+      </label>
+      <p class="xpgn-course-note">Le cours sera enregistré dans un fichier .xpgn avec la partie courante, si elle existe.</p>
+      <div class="xpgn-course-actions">
+        <button type="button" class="xpgn-course-cancel">Annuler</button>
+        <button type="submit" class="xpgn-course-create">Créer le cours</button>
+      </div>
+    </form>`;
+  document.body.appendChild(dialog);
+
+  const form = dialog.querySelector('form');
+  const close = () => dialog.close();
+  dialog.querySelector('.xpgn-course-close').addEventListener('click', close);
+  dialog.querySelector('.xpgn-course-cancel').addEventListener('click', close);
+  dialog.addEventListener('click', (event) => {
+    if (event.target === dialog) close();
+  });
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const data = new FormData(form);
+    const title = String(data.get('title') || '').trim();
+    const chapterTitle = String(data.get('chapter') || '').trim();
+    const explanation = String(data.get('text') || '').trim();
+    if (!title || !chapterTitle || !explanation) {
+      showMessage('Le titre du cours, le titre du chapitre et l’explication sont obligatoires.', 'error', pgnMessage);
+      return;
+    }
+    const blocks = [
+      { id: 'introduction', type: 'heading', text: 'Introduction', level: 2 },
+      { id: 'explication', type: 'text', text: explanation },
+    ];
+    if (data.get('diagram') && rootNode && currentNode) {
+      blocks.push({
+        id: 'diagramme-1',
+        type: 'diagram',
+        position: { path: getXpgnNodePath(currentNode) },
+        caption: 'Position de travail',
+      });
+    }
+    currentXpgnCourse = {
+      title,
+      description: String(data.get('description') || '').trim() || undefined,
+      language: 'fr',
+      chapters: [{
+        id: 'chapitre-1',
+        title: chapterTitle,
+        blocks,
+      }],
+    };
+    currentXpgnGames = [];
+    currentXpgnCourseOnly = !rootNode;
+    close();
+    showCourseReader();
+    showMessage('Cours créé et ouvert. Utilisez le bouton XPGN pour enregistrer le document et son contenu.', 'success', pgnMessage);
+  });
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'export-pgn-button xpgn-action-button';
+  button.textContent = 'Nouveau cours';
+  button.title = 'Créer un document de cours XPGN';
+  button.addEventListener('click', () => {
+    const diagram = form.elements.namedItem('diagram');
+    diagram.disabled = !rootNode || !currentNode;
+    diagram.checked = Boolean(rootNode && currentNode);
+    dialog.showModal();
+  });
+  $('.notation-control').append(button);
+
+  const getActiveCourseChapterIndex = () => {
+    if (!currentXpgnCourse || !currentXpgnCourse.chapters.length) return -1;
+    const selected = courseReaderDialog ? Number(courseReaderDialog.dataset.chapter) : NaN;
+    return Number.isInteger(selected) && selected >= 0 && selected < currentXpgnCourse.chapters.length
+      ? selected
+      : currentXpgnCourse.chapters.length - 1;
+  };
+
+  const addPositionButton = document.createElement('button');
+  addPositionButton.type = 'button';
+  addPositionButton.className = 'export-pgn-button xpgn-action-button';
+  addPositionButton.textContent = 'Ajouter une position';
+  addPositionButton.title = 'Ajouter la position affichée au dernier chapitre du cours';
+  addPositionButton.addEventListener('click', () => {
+    if (!currentXpgnCourse || !currentXpgnCourse.chapters.length) {
+      showMessage('Créez ou ouvrez d’abord un cours XPGN.', 'info', pgnMessage);
+      return;
+    }
+    if (!locked || !currentNode) {
+      showMessage('Affichez d’abord une position de partie sur l’échiquier.', 'info', pgnMessage);
+      return;
+    }
+    const chapterIndex = getActiveCourseChapterIndex();
+    const chapter = currentXpgnCourse.chapters[chapterIndex];
+    const usedIds = new Set(chapter.blocks.map(block => block.id).filter(Boolean));
+    let suffix = chapter.blocks.length + 1;
+    let id = 'position-' + suffix;
+    while (usedIds.has(id)) id = 'position-' + (++suffix);
+    chapter.blocks.push({
+      id,
+      type: 'diagram',
+      position: { path: getXpgnNodePath(currentNode) },
+      caption: 'Position ' + (chapter.blocks.filter(block => block.type === 'diagram' || block.type === 'exercise').length + 1),
+    });
+    showCourseReader(chapterIndex);
+    showMessage('Position ajoutée au chapitre « ' + chapter.title + ' ». Vous pouvez en ajouter d’autres après avoir navigué dans la partie.', 'success', pgnMessage);
+  });
+  $('.notation-control').append(addPositionButton);
+
+  // Ajout de blocs pédagogiques sans quitter le cours : texte, exercice et chapitre.
+  const addBlockDialog = document.createElement('dialog');
+  addBlockDialog.className = 'xpgn-course-dialog';
+  addBlockDialog.innerHTML = `
+    <form class="xpgn-course-form">
+      <div class="xpgn-course-head"><h2>Ajouter au cours</h2><button type="button" class="xpgn-course-close" aria-label="Fermer">×</button></div>
+      <label>Type de contenu
+        <select name="kind">
+          <option value="text">Texte explicatif</option>
+          <option value="exercise">Exercice sur la position actuelle</option>
+        </select>
+      </label>
+      <label class="xpgn-add-text-field">Texte
+        <textarea name="text" rows="6" maxlength="20000" placeholder="Rédigez l’explication…"></textarea>
+      </label>
+      <label class="xpgn-add-exercise-field" hidden>Consigne de l’exercice
+        <textarea name="prompt" rows="3" maxlength="5000" placeholder="Que doit trouver le lecteur ?"></textarea>
+      </label>
+      <label class="xpgn-add-exercise-field" hidden>Réponse attendue
+        <select name="move"></select>
+      </label>
+      <label class="xpgn-add-exercise-field" hidden>Explication de la solution
+        <textarea name="explanation" rows="3" maxlength="5000" placeholder="Pourquoi ce coup est-il correct ?"></textarea>
+      </label>
+      <p class="xpgn-course-note xpgn-add-exercise-field" hidden>La réponse proposée est un coup disponible dans la position actuelle. Pour créer l’exercice, placez-vous d’abord sur cette position dans la partie.</p>
+      <div class="xpgn-course-actions"><button type="button" class="xpgn-add-cancel">Annuler</button><button type="submit">Ajouter au chapitre</button></div>
+    </form>`;
+  document.body.appendChild(addBlockDialog);
+  const addBlockForm = addBlockDialog.querySelector('form');
+  const kindSelect = addBlockForm.elements.namedItem('kind');
+  const textField = addBlockForm.querySelector('.xpgn-add-text-field');
+  const exerciseFields = [...addBlockForm.querySelectorAll('.xpgn-add-exercise-field')];
+  const moveSelect = addBlockForm.elements.namedItem('move');
+  const updateBlockKind = () => {
+    const exercise = kindSelect.value === 'exercise';
+    textField.hidden = exercise;
+    exerciseFields.forEach(field => { field.hidden = !exercise; });
+    if (exercise) {
+      moveSelect.innerHTML = '';
+      for (const [index, child] of (currentNode?.children || []).entries()) {
+        const option = document.createElement('option');
+        option.value = String(index);
+        option.textContent = child.move.san + (child.move.nullMove ? ' (coup nul)' : '');
+        moveSelect.appendChild(option);
+      }
+    }
+  };
+  kindSelect.addEventListener('change', updateBlockKind);
+  const closeBlockDialog = () => addBlockDialog.close();
+  addBlockDialog.querySelector('.xpgn-course-close').addEventListener('click', closeBlockDialog);
+  addBlockDialog.querySelector('.xpgn-add-cancel').addEventListener('click', closeBlockDialog);
+  addBlockForm.addEventListener('submit', event => {
+    event.preventDefault();
+    if (!currentXpgnCourse || !currentXpgnCourse.chapters.length) return;
+    const chapterIndex = getActiveCourseChapterIndex();
+    const chapter = currentXpgnCourse.chapters[chapterIndex];
+    const data = new FormData(addBlockForm);
+    const used = new Set(chapter.blocks.map(block => block.id).filter(Boolean));
+    const prefix = kindSelect.value === 'exercise' ? 'exercice' : 'texte';
+    let number = chapter.blocks.length + 1;
+    let id = prefix + '-' + number;
+    while (used.has(id)) id = prefix + '-' + (++number);
+    if (kindSelect.value === 'text') {
+      const text = String(data.get('text') || '').trim();
+      if (!text) {
+        showMessage('Le texte du bloc ne peut pas être vide.', 'error', pgnMessage);
+        return;
+      }
+      chapter.blocks.push({ id, type: 'text', text });
+    } else {
+      const prompt = String(data.get('prompt') || '').trim();
+      const child = currentNode && currentNode.children[Number(data.get('move'))];
+      if (!locked || !currentNode || !prompt || !child) {
+        showMessage('Pour ajouter un exercice, sélectionnez une position avec au moins un coup de réponse.', 'error', pgnMessage);
+        return;
+      }
+      const move = child.move;
+      const uci = move.nullMove ? '0000' : move.from + move.to + (move.promotion || '');
+      chapter.blocks.push({
+        id,
+        type: 'exercise',
+        prompt,
+        position: { path: getXpgnNodePath(currentNode) },
+        expectedMoves: [uci],
+        ...(String(data.get('explanation') || '').trim() ? { explanation: String(data.get('explanation')).trim() } : {}),
+      });
+    }
+    closeBlockDialog();
+    showCourseReader(chapterIndex);
+    showMessage('Contenu ajouté au chapitre « ' + chapter.title + ' ». Pensez à enregistrer le fichier XPGN.', 'success', pgnMessage);
+  });
+
+  const addBlockButton = document.createElement('button');
+  addBlockButton.type = 'button';
+  addBlockButton.className = 'export-pgn-button xpgn-action-button';
+  addBlockButton.textContent = 'Ajouter texte / exercice';
+  addBlockButton.title = 'Ajouter un bloc de texte ou un exercice au chapitre courant';
+  addBlockButton.addEventListener('click', () => {
+    if (!currentXpgnCourse) {
+      showMessage('Créez ou ouvrez d’abord un cours XPGN.', 'info', pgnMessage);
+      return;
+    }
+    kindSelect.value = 'text';
+    updateBlockKind();
+    addBlockDialog.showModal();
+  });
+  $('.notation-control').append(addBlockButton);
+
+  const chapterDialog = document.createElement('dialog');
+  chapterDialog.className = 'xpgn-course-dialog';
+  chapterDialog.innerHTML = `
+    <form class="xpgn-course-form">
+      <div class="xpgn-course-head"><h2>Nouveau chapitre</h2><button type="button" class="xpgn-course-close" aria-label="Fermer">×</button></div>
+      <label>Titre du chapitre<input name="title" required maxlength="300" placeholder="Titre du chapitre"></label>
+      <div class="xpgn-course-actions"><button type="button" class="xpgn-chapter-cancel">Annuler</button><button type="submit">Créer le chapitre</button></div>
+    </form>`;
+  document.body.appendChild(chapterDialog);
+  const chapterForm = chapterDialog.querySelector('form');
+  const closeChapterDialog = () => chapterDialog.close();
+  chapterDialog.querySelector('.xpgn-course-close').addEventListener('click', closeChapterDialog);
+  chapterDialog.querySelector('.xpgn-chapter-cancel').addEventListener('click', closeChapterDialog);
+  chapterForm.addEventListener('submit', event => {
+    event.preventDefault();
+    if (!currentXpgnCourse) return;
+    const title = String(new FormData(chapterForm).get('title') || '').trim();
+    if (!title) return;
+    const usedChapterIds = new Set(currentXpgnCourse.chapters.map(chapter => chapter.id));
+    let chapterNumber = currentXpgnCourse.chapters.length + 1;
+    let id = 'chapitre-' + chapterNumber;
+    while (usedChapterIds.has(id)) id = 'chapitre-' + (++chapterNumber);
+    currentXpgnCourse.chapters.push({
+      id,
+      title,
+      blocks: [{ id: id + '-introduction', type: 'heading', text: title, level: 2 }],
+    });
+    closeChapterDialog();
+    showCourseReader(currentXpgnCourse.chapters.length - 1);
+    showMessage('Chapitre « ' + title + ' » créé. Vous pouvez maintenant y ajouter du texte, des positions et des exercices.', 'success', pgnMessage);
+  });
+  const addChapterButton = document.createElement('button');
+  addChapterButton.type = 'button';
+  addChapterButton.className = 'export-pgn-button xpgn-action-button';
+  addChapterButton.textContent = 'Nouveau chapitre';
+  addChapterButton.title = 'Ajouter un chapitre au cours XPGN';
+  addChapterButton.addEventListener('click', () => {
+    if (!currentXpgnCourse) {
+      showMessage('Créez ou ouvrez d’abord un cours XPGN.', 'info', pgnMessage);
+      return;
+    }
+    chapterForm.reset();
+    chapterDialog.showModal();
+  });
+  $('.notation-control').append(addChapterButton);
+}
+
+// ==================================================
+// MENU DE NOTATION (repris de cc2)
+// ==================================================
+
+function setupNotationMenu() {
+  const select = $('#notation');
+  select.classList.add('notation-native-select');
+
+  const menu = document.createElement('div');
+  menu.className = 'notation-menu';
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'notation-menu-button';
+  button.setAttribute('aria-haspopup', 'listbox');
+  button.setAttribute('aria-expanded', 'false');
+  button.title = 'Choisir la notation';
+
+  const preview = document.createElement('span');
+  preview.className = 'notation-menu-preview';
+  const arrow = document.createElement('span');
+  arrow.className = 'notation-menu-arrow';
+  arrow.textContent = '▾';
+  button.append(preview, arrow);
+
+  const list = document.createElement('div');
+  list.className = 'notation-menu-list';
+  list.setAttribute('role', 'listbox');
+  list.hidden = true;
+
+  const choices = [
+    { value: 'french', text: 'R D T F C' },
+    { value: 'figurines', pieces: ['wK', 'wQ', 'wR', 'wB', 'wN'] },
+    { value: 'international', text: 'K Q R B N' },
+  ];
+
+  function fill(container, choice) {
+    container.innerHTML = '';
+    if (choice.pieces) {
+      for (const piece of choice.pieces) {
+        const image = document.createElement('img');
+        image.src = asset('pieces/alpha/' + piece + '.svg');
+        image.alt = '';
+        image.className = 'notation-menu-piece';
+        container.appendChild(image);
+      }
+    } else {
+      container.textContent = choice.text;
+    }
+  }
+
+  const closeMenu = () => {
+    list.hidden = true;
+    button.setAttribute('aria-expanded', 'false');
+  };
+
+  const update = () => {
+    fill(preview, choices.find((c) => c.value === select.value) || choices[0]);
+    list.querySelectorAll('.notation-menu-option').forEach((item) => {
+      const selected = item.dataset.value === select.value;
+      item.classList.toggle('selected', selected);
+      item.setAttribute('aria-selected', selected ? 'true' : 'false');
+    });
+  };
+
+  for (const choice of choices) {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'notation-menu-option';
+    item.dataset.value = choice.value;
+    item.setAttribute('role', 'option');
+    fill(item, choice);
+    item.addEventListener('click', () => {
+      select.value = choice.value;
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      closeMenu();
+    });
+    list.appendChild(item);
+  }
+
+  button.addEventListener('click', (event) => {
+    event.stopPropagation();
+    list.hidden = !list.hidden;
+    button.setAttribute('aria-expanded', list.hidden ? 'false' : 'true');
+  });
+  document.addEventListener('click', (event) => {
+    if (!menu.contains(event.target)) closeMenu();
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeMenu();
+  });
+  select.addEventListener('change', update);
+
+  menu.append(button, list);
+  select.insertAdjacentElement('afterend', menu);
+  update();
+}
+
+$('#notation').addEventListener('change', () => {
+  updateMoves();
+  renderTablebaseMoves();
+});
+
+// ==================================================
+// BOUTONS PLAY (camp du joueur) ET START
+// ==================================================
+
+function setPlayerSide(mode) {
+  playerSide = mode;
+  document.querySelectorAll('.mode-btn').forEach((button) => {
+    const selected = playerSide === button.dataset.mode;
+    button.classList.toggle('selected', selected);
+    button.setAttribute('aria-pressed', selected ? 'true' : 'false');
+  });
+  updateZoneAvailability();
+  clearZone();
+}
+
+document.querySelectorAll('.mode-btn').forEach((button) => {
+  button.addEventListener('click', () => {
+    if (playerSide === button.dataset.mode) return; // un mode reste toujours choisi
+    setPlayerSide(button.dataset.mode);
+    // en partie : Stockfish reprend la main si c'est à lui de jouer
+    if (locked) afterPosition();
+  });
+});
+
+startButtons.w.addEventListener('click', () => onStartClick('w'));
+startButtons.b.addEventListener('click', () => onStartClick('b'));
+
+$('#turn-white').addEventListener('click', () => {
+  if (locked) changeTrait('w');
+  else { editMeta.turn = 'w'; updateStartButtons(); }
+});
+$('#turn-black').addEventListener('click', () => {
+  if (locked) changeTrait('b');
+  else { editMeta.turn = 'b'; updateStartButtons(); }
+});
+
+document.querySelectorAll('.shift-btn').forEach((button) => {
+  button.addEventListener('click', () => shiftPosition(button.dataset.dir));
+});
+
+// ==================================================
+// INITIALISATION
+// ==================================================
+
+buildPalette();
+setupNotationMenu();
+setupPgnButton();
+setupXpgnControls();
+updateCoordinates();
+updateNavigation();
+updateShiftButtons();
+updateStartButtons();
+updateZoneAvailability();
+setStatus('Position éditable');
+ + item.nag + ' — ' + item.label;
+      optgroup.appendChild(option);
+    }
+    if (optgroup.children.length) nagSelect.appendChild(optgroup);
   }
   const closeNag = () => nagDialog.close();
   nagDialog.querySelector('.xpgn-course-close').addEventListener('click', closeNag);
