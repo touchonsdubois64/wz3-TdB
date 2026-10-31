@@ -133,7 +133,7 @@ test('conserve les NAG et les directives PGN non graphiques', () => {
 
 test('plusieurs coups nuls successifs restent navigables par chemin UCI', () => {
   const fen = '8/8/8/4k3/8/8/8/K2Q4 w - - 0 1';
-  const parsed = parsePgn('[SetUp "1"]\\n[FEN "' + fen + '"]\\n\\n1. -- -- 2. Qd2 *', Chess);
+  const parsed = parsePgn('[SetUp "1"]\n[FEN "' + fen + '"]\n\n1. -- -- 2. Qd2 *', Chess);
   assert.equal(parsed.error, null);
   assert.equal(parsed.moveCount, 3);
   const afterTwoPasses = findPgnNodeByPath(parsed.root, ['0000', '0000']);
