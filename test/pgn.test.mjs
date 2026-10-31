@@ -148,7 +148,7 @@ test('plusieurs coups nuls successifs restent navigables par chemin UCI', () => 
 
 
 test('les commentaires PGN conservent les paragraphes multilignes', () => {
-  const r = parsePgn('1. e4 {Idée principale\\n\\nDeuxième idée} e5 *', Chess);
+  const r = parsePgn('1. e4 {Idée principale\n\nDeuxième idée} e5 *', Chess);
   assert.equal(r.error, null);
-  assert.equal(r.root.children[0].note, 'Idée principale\\n\\nDeuxième idée');
+  assert.equal(r.root.children[0].note, 'Idée principale\n\nDeuxième idée');
 });
