@@ -161,3 +161,16 @@ test('un chemin XPGN peut traverser plusieurs coups nuls', () => {
   assert.equal(attached.unresolved.length, 0);
   assert.equal(secondPass.xpgnAnnotations[0].key, 'e4');
 });
+
+
+test('un même chapitre conserve plusieurs positions pédagogiques dans leur ordre', () => {
+  const doc = courseOnly();
+  const blocks = doc.course.chapters[0].blocks;
+  blocks.push(
+    { id: 'diagramme-2', type: 'diagram', position: { fen: '8/8/8/8/8/8/4k3/4K3 w - - 0 1' }, caption: 'Opposition' },
+    { id: 'diagramme-3', type: 'diagram', position: { fen: startFen }, caption: 'Retour à la position initiale' },
+  );
+  const parsed = parseXpgn(stringifyXpgn(doc));
+  assert.equal(parsed.course.chapters[0].blocks.length, 6);
+  assert.deepEqual(parsed.course.chapters[0].blocks.slice(-2).map(block => block.caption), ['Opposition', 'Retour à la position initiale']);
+});
