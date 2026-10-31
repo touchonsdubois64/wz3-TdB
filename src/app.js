@@ -908,9 +908,9 @@ function changeTrait(turn) {
   let child = findChild(currentNode, nullMove);
   if (!child) {
     child = { parent: currentNode, move: nullMove, source: 'trait', children: [], fen: game.fen(), selectedChild: null, comment: null };
-    inheritXpgnAnnotations(currentNode, child);
     currentNode.children.push(child);
   }
+  inheritXpgnAnnotations(currentNode, child);
   currentNode.selectedChild = child;
   currentNode = child;
   marks.setItems(currentNode.xpgnAnnotations || []);
@@ -1123,6 +1123,8 @@ function commitMove(move, source) {
   if (!child) {
     child = createNode(currentNode, move, source);
     currentNode.children.push(child);
+  } else {
+    inheritXpgnAnnotations(currentNode, child);
   }
   currentNode.selectedChild = child;
   currentNode = child;
