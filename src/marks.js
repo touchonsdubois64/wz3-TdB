@@ -19,10 +19,12 @@ export const COLORS = [
   { id: 'noir', label: 'Noir', hex: '#141414', outline: '#ffffff' },
   { id: 'gris', label: 'Gris', hex: '#8b8b8b', outline: '#ffffff' },
   { id: 'blanc', label: 'Blanc', hex: '#ffffff', outline: '#141414' },
+  { id: 'marron', label: 'Marron', hex: '#8a5a2b', outline: '#ffffff' },
   { id: 'rouge', label: 'Rouge', hex: '#e02424', outline: '#ffffff' },
   { id: 'orange', label: 'Orange', hex: '#f77f00', outline: '#ffffff' },
   { id: 'jaune', label: 'Jaune', hex: '#ffd60a', outline: '#ffffff' },
   { id: 'vert', label: 'Vert', hex: '#1f9d3a', outline: '#ffffff' },
+  { id: 'vertclair', label: 'Vert clair', hex: '#44d65a', outline: '#ffffff' },
   { id: 'cyan', label: 'Cyan', hex: '#00b4d8', outline: '#ffffff' },
   { id: 'bleu', label: 'Bleu', hex: '#1d4ed8', outline: '#ffffff' },
   { id: 'violet', label: 'Violet', hex: '#8e24aa', outline: '#ffffff' },
@@ -59,9 +61,11 @@ export const PIECE_LETTERS = ['K', 'Q', 'R', 'B', 'N', 'P'];
 // Traits, flèches et flèches doubles, pleins ou pointillés (« d » devant le nom : dline, darrow, darrow2)
 export const TWO_CLICK = new Set(['line', 'dline', 'arrow', 'darrow', 'arrow2', 'darrow2']);
 
-// Zones de cases : colorée à moitié transparente avec bordure (zone), sans bordure (fill), hachurée avec bordure (hatch),
-// et zone simplement entourée (border)
-export const ZONE_TYPES = new Set(['border', 'zone', 'fill', 'hatch']);
+// Zones de cases, à coins droits ou arrondis (propriété « round » de l'élément) :
+//   border = bordure seule        fill  = couleur seule (moitié transparente), sans bordure
+//   zone   = bordure + couleur    shade = hachures seules, sans bordure
+//   hatch  = bordure + hachures
+export const ZONE_TYPES = new Set(['border', 'fill', 'zone', 'shade', 'hatch']);
 
 // --------------------------------------------------
 // DONNÉES
@@ -93,18 +97,19 @@ export function createMarkSet() {
       else items[index] = item;
     },
 
-    /** Ajoute ou retire une case d'une zone entourée (une zone par couleur). */
+    /** Ajoute ou retire une case d'une zone entourée (bordure seule, coins droits). */
     toggleBorder(key, color) {
-      const index = items.findIndex((item) => item.type === 'border' && item.key === key && item.color === color);
-      if (index >= 0) items.splice(index, 1);
-      else items.push({ type: 'border', value: '', color, key });
+      this.toggleZone(key, color, 'border');
     },
 
-    /** Ajoute ou retire une case d'une zone colorée (une zone par couleur) : type 'zone', 'fill' ou 'hatch'. */
-    toggleZone(key, color, type = 'zone') {
+    /**
+     * Ajoute ou retire une case d'une zone (une zone par type et par couleur).
+     * type : 'border', 'fill', 'zone', 'shade' ou 'hatch' ; round : coins arrondis.
+     */
+    toggleZone(key, color, type = 'zone', round = false) {
       const index = items.findIndex((item) => item.type === type && item.key === key && item.color === color);
       if (index >= 0) items.splice(index, 1);
-      else items.push({ type, value: '', color, key });
+      else items.push(round ? { type, value: '', color, key, round: true } : { type, value: '', color, key });
     },
 
     /** Trait, flèche ou flèche double entre deux cases (pleins ou pointillés). */
@@ -140,15 +145,17 @@ export function createMarkSet() {
 //   plus:vert:b2  cross:rouge:b3  minus:noir:b4     symboles + × −
 //   label=a%27:rouge:e6                      texte libre (caractères spéciaux en %XX : a' = a%27)
 //   piece=Kb:rouge:g1                        figurine : lettre K Q R B N P, puis b (plein) ou w (creux)
-//   border:rouge:d4,d5,e4,e5                 cases d'une zone entourée
-//   zone:vert:d4,d5,e4,e5                    cases d'une zone colorée (moitié transparente, avec bordure)
-//   fill:vert:d4,d5,e4,e5                    zone colorée sans bordure
-//   hatch:vert:d4,d5,e4,e5                   zone hachurée, avec bordure
+//   border:rouge:d4,d5,e4,e5                 zone avec bordure seule
+//   fill:vert:d4,d5,e4,e5                    zone colorée (moitié transparente), sans bordure
+//   zone:vert:d4,d5,e4,e5                    zone avec bordure et intérieur coloré
+//   shade:vert:d4,d5,e4,e5                   zone hachurée, sans bordure
+//   hatch:vert:d4,d5,e4,e5                   zone avec bordure et intérieur hachuré
+//   rborder rfill rzone rshade rhatch        les mêmes zones à coins arrondis (r devant le nom)
 //   arrow:bleu:e2>e4,g1>f3                   flèches (départ>arrivée) ; arrow2 = double, line = trait
 //   darrow, darrow2, dline                   les mêmes en pointillés
 //
 // Genres de forme : circle square box diamond triangle star disc.
-// Couleurs : noir gris blanc rouge orange jaune vert cyan bleu violet rose.
+// Couleurs : noir gris blanc marron rouge orange jaune vert vertclair cyan bleu violet rose.
 // ==================================================
 
 const SQUARE_PATTERN = /^[a-h][1-8]$/;
@@ -180,7 +187,7 @@ function headOf(item) {
       kind = 'piece=' + String(item.value).replace(':', '');
       break;
     default:
-      kind = item.type; // border, zone, line, arrow, arrow2
+      kind = (item.round && ZONE_KINDS.has(item.type) ? 'r' : '') + item.type; // zones (rzone…), traits et flèches
   }
   return kind + ':' + item.color;
 }
@@ -216,8 +223,13 @@ export function decodeMarks(code) {
     }
     const [kindPart, colorId, targetPart] = parts;
     const separator = kindPart.indexOf('=');
-    const kind = separator < 0 ? kindPart : kindPart.slice(0, separator);
+    let kind = separator < 0 ? kindPart : kindPart.slice(0, separator);
     let rawValue = separator < 0 ? '' : kindPart.slice(separator + 1);
+    let round = false;
+    if (kind.charAt(0) === 'r' && ZONE_KINDS.has(kind.slice(1))) {
+      round = true; // zone à coins arrondis : rzone, rfill, rborder, rshade, rhatch
+      kind = kind.slice(1);
+    }
 
     if (!COLOR_BY_ID[colorId]) {
       errors.push('« ' + token + ' » : couleur inconnue « ' + colorId + ' »');
@@ -273,7 +285,7 @@ export function decodeMarks(code) {
       } else {
         const sameSlot = (item) => item.key === target && item.type === type && (!ZONE_KINDS.has(type) || item.color === colorId);
         const index = marks.items.findIndex(sameSlot); // une seule annotation de chaque genre par case
-        const item = { type, value, color: colorId, key: target };
+        const item = round ? { type, value, color: colorId, key: target, round: true } : { type, value, color: colorId, key: target };
         if (index < 0) marks.items.push(item);
         else marks.items[index] = item;
       }
@@ -513,28 +525,67 @@ function squareOrigin(key, white) {
   return white ? [file * 100, (7 - rank) * 100] : [(7 - file) * 100, rank * 100];
 }
 
-/** Cases (en unités de case) d'un type de zone, regroupées par couleur dans l'ordre d'apparition. */
-function cellsByColor(items, type, white) {
-  const byColor = new Map();
+/** Groupes de cases d'un type de zone, par couleur et par style de coins, dans l'ordre d'apparition. */
+function zoneGroups(items, type, white) {
+  const groups = new Map();
   for (const item of items) {
     if (item.type !== type) continue;
     const [x, y] = squareOrigin(item.key, white);
-    if (!byColor.has(item.color)) byColor.set(item.color, []);
-    byColor.get(item.color).push([x / 100, y / 100]);
+    const id = item.color + (item.round ? '|r' : '');
+    if (!groups.has(id)) groups.set(id, { colorId: item.color, round: Boolean(item.round), cells: [] });
+    groups.get(id).cells.push([x / 100, y / 100]);
   }
-  return byColor;
+  return [...groups.values()];
 }
 
-/** Tracé (attribut d) du contour des cases, décalé vers l'intérieur de `inset` ; chemin vide s'il n'y a rien à tracer. */
-function zonePath(cells, inset) {
+// Coins arrondis : rayon du bord extérieur de la zone, en unités de 100 par case (« légèrement » arrondis)
+export const CORNER_RADIUS = 16;
+
+/**
+ * Tracé d'une boucle de sommets ; avec `radius`, les coins saillants (vers l'extérieur de la zone) sont arrondis
+ * et les coins rentrants restent vifs, de sorte que les cases sélectionnées restent entièrement couvertes.
+ * L'intérieur est à droite du sens de parcours (voir borderLoops) : un virage à droite est un coin saillant.
+ */
+function loopPath(points, radius) {
+  const count = points.length;
+  let d = '';
+  for (let i = 0; i < count; i++) {
+    const previous = points[(i + count - 1) % count];
+    const current = points[i];
+    const next = points[(i + 1) % count];
+    const inLength = Math.hypot(current[0] - previous[0], current[1] - previous[1]);
+    const outLength = Math.hypot(next[0] - current[0], next[1] - current[1]);
+    const inDir = [(current[0] - previous[0]) / inLength, (current[1] - previous[1]) / inLength];
+    const outDir = [(next[0] - current[0]) / outLength, (next[1] - current[1]) / outLength];
+    const convex = inDir[0] * outDir[1] - inDir[1] * outDir[0] > 0;
+    const r = radius && convex ? Math.min(radius, inLength / 2, outLength / 2) : 0;
+    const command = i === 0 ? 'M' : 'L';
+    if (r > 0) {
+      const start = [current[0] - inDir[0] * r, current[1] - inDir[1] * r];
+      const end = [current[0] + outDir[0] * r, current[1] + outDir[1] * r];
+      d += `${command}${number(start[0])} ${number(start[1])}A${number(r)} ${number(r)} 0 0 1 ${number(end[0])} ${number(end[1])}`;
+    } else {
+      d += `${command}${number(current[0])} ${number(current[1])}`;
+    }
+  }
+  return d + 'Z';
+}
+
+/**
+ * Tracé (attribut d) du contour des cases, décalé vers l'intérieur de `inset` ; chemin vide s'il n'y a rien à tracer.
+ * round : coins saillants arrondis, de sorte que le bord extérieur (inset 0, ou bord extérieur du trait de largeur
+ * 2 x inset) ait le rayon CORNER_RADIUS.
+ */
+function zonePath(cells, inset, round = false) {
+  const radius = round ? Math.max(CORNER_RADIUS - inset, 1) : 0;
   return borderLoops(cells)
     .map((loop) => insetLoop(loop, inset))
     .filter((points) => points.length >= 3)
-    .map((points) => 'M' + points.map(([x, y]) => number(x) + ' ' + number(y)).join('L') + 'Z')
+    .map((points) => loopPath(points, radius))
     .join('');
 }
 
-// Hachures des zones : traits fins « \ » (perpendiculaires à celles des cases sombres du mode Diagramme),
+// Hachures des zones : traits fins « \\ » (perpendiculaires à celles des cases sombres du mode Diagramme),
 // environ 7 à 8 traits par case. Le motif est ancré sur l'échiquier : deux zones voisines se raccordent.
 const HATCH_SPACING = 9.4; // écart entre deux traits (unités de 100 par case) : 100 / 7,5 hachures / racine de 2
 const HATCH_WIDTH = 3.2;
@@ -546,61 +597,58 @@ function hatchPattern(id, color, spacing = HATCH_SPACING, width = HATCH_WIDTH) {
   );
 }
 
+const BORDER_INSET = 3; // la bordure (trait de 6) occupe les 6 unités les plus extérieures de la zone
+const BORDER_WIDTH = 6;
+
 /**
- * Zones : « fill » (intérieur à 50 % de transparence, cases entièrement recouvertes, sans bordure),
- * « zone » (même intérieur avec une bordure de la même couleur) et « hatch » (intérieur hachuré, même bordure).
+ * Zones, de dessous en dessus : « fill » (couleur seule), « shade » (hachures seules), « zone » (bordure + couleur),
+ * « hatch » (bordure + hachures) puis « border » (bordure seule). Sans bordure, le tracé suit exactement le bord des
+ * cases ; avec bordure, le trait est tout entier à l'intérieur des cases. Aucun liseré clair autour des bordures.
  */
 function zonesFragment(items, white) {
+  let defs = '';
   let body = '';
 
-  for (const [colorId, cells] of cellsByColor(items, 'fill', white)) {
-    const color = COLOR_BY_ID[colorId] || COLORS[3];
-    const d = zonePath(cells, 0);
+  for (const { colorId, round, cells } of zoneGroups(items, 'fill', white)) {
+    const color = COLOR_BY_ID[colorId] || COLOR_BY_ID.rouge;
+    const d = zonePath(cells, 0, round);
     if (d) body += `<path d="${d}" fill="${color.hex}" fill-opacity=".5" fill-rule="evenodd"/>`;
   }
 
-  for (const [colorId, cells] of cellsByColor(items, 'zone', white)) {
-    const color = COLOR_BY_ID[colorId] || COLORS[3];
-    const d = zonePath(cells, 3);
-    if (d) body += `<path d="${d}" fill="${color.hex}" fill-opacity=".5" fill-rule="evenodd" stroke="${color.hex}" stroke-width="6" ${MITER}/>`;
-  }
-
-  let defs = '';
-  for (const [colorId, cells] of cellsByColor(items, 'hatch', white)) {
-    const color = COLOR_BY_ID[colorId] || COLORS[3];
-    const d = zonePath(cells, 3);
+  for (const { colorId, round, cells } of zoneGroups(items, 'shade', white)) {
+    const color = COLOR_BY_ID[colorId] || COLOR_BY_ID.rouge;
+    const d = zonePath(cells, 0, round);
     if (!d) continue;
     const id = 'mk-hatch-' + color.id;
-    defs += hatchPattern(id, color);
-    body += `<path d="${d}" fill="url(#${id})" fill-rule="evenodd" stroke="${color.hex}" stroke-width="6" ${MITER}/>`;
+    if (!defs.includes(`id="${id}"`)) defs += hatchPattern(id, color);
+    body += `<path d="${d}" fill="url(#${id})" fill-rule="evenodd"/>`;
   }
+
+  for (const { colorId, round, cells } of zoneGroups(items, 'zone', white)) {
+    const color = COLOR_BY_ID[colorId] || COLOR_BY_ID.rouge;
+    const d = zonePath(cells, BORDER_INSET, round);
+    if (d) body += `<path d="${d}" fill="${color.hex}" fill-opacity=".5" fill-rule="evenodd" stroke="${color.hex}" stroke-width="${BORDER_WIDTH}" ${MITER}/>`;
+  }
+
+  for (const { colorId, round, cells } of zoneGroups(items, 'hatch', white)) {
+    const color = COLOR_BY_ID[colorId] || COLOR_BY_ID.rouge;
+    const d = zonePath(cells, BORDER_INSET, round);
+    if (!d) continue;
+    const id = 'mk-hatch-' + color.id;
+    if (!defs.includes(`id="${id}"`)) defs += hatchPattern(id, color);
+    body += `<path d="${d}" fill="url(#${id})" fill-rule="evenodd" stroke="${color.hex}" stroke-width="${BORDER_WIDTH}" ${MITER}/>`;
+  }
+
+  for (const { colorId, round, cells } of zoneGroups(items, 'border', white)) {
+    const color = COLOR_BY_ID[colorId] || COLOR_BY_ID.rouge;
+    const d = zonePath(cells, BORDER_INSET, round);
+    if (d) body += `<path d="${d}" fill="none" stroke="${color.hex}" stroke-width="${BORDER_WIDTH}" ${MITER}/>`;
+  }
+
   return (defs ? `<defs>${defs}</defs>` : '') + body;
 }
 
-const RANK = { border: 0, piece: 1, shape: 2, line: 3, dline: 3, arrow: 3, darrow: 3, arrow2: 3, darrow2: 3, text: 4, label: 5 };
-
-/** Contours des zones « Bordures » : un tracé continu par groupe de cases connexes. */
-function bordersFragment(items, white) {
-  const byColor = new Map();
-  for (const item of items) {
-    if (item.type !== 'border') continue;
-    const [x, y] = squareOrigin(item.key, white);
-    if (!byColor.has(item.color)) byColor.set(item.color, []);
-    byColor.get(item.color).push([x / 100, y / 100]);
-  }
-
-  let body = '';
-  for (const [colorId, cells] of byColor) {
-    const color = COLOR_BY_ID[colorId] || COLORS[3];
-    for (const loop of borderLoops(cells)) {
-      const points = insetLoop(loop, 8);
-      if (points.length < 3) continue;
-      const d = 'M' + points.map(([x, y]) => number(x) + ' ' + number(y)).join('L') + 'Z';
-      body += stroked('path', `d="${d}"`, color, 8, MITER);
-    }
-  }
-  return body;
-}
+const RANK = { piece: 1, shape: 2, line: 3, dline: 3, arrow: 3, darrow: 3, arrow2: 3, darrow2: 3, text: 4, label: 5 };
 
 /**
  * SVG complet des annotations pour l'orientation donnée.
@@ -608,10 +656,10 @@ function bordersFragment(items, white) {
  */
 export function renderSvg(items, white, pending = null) {
   const ordered = items.filter((item) => !ZONE_TYPES.has(item.type)).sort((a, b) => RANK[a.type] - RANK[b.type]);
-  let body = zonesFragment(items, white) + bordersFragment(items, white);
+  let body = zonesFragment(items, white);
 
   for (const item of ordered) {
-    const color = COLOR_BY_ID[item.color] || COLORS[3];
+    const color = COLOR_BY_ID[item.color] || COLOR_BY_ID.rouge;
 
     if (TWO_CLICK.has(item.type)) {
       const [fx, fy] = squareOrigin(item.from, white);
@@ -650,17 +698,21 @@ export function renderSvg(items, white, pending = null) {
 }
 
 /** Petit SVG de prévisualisation d'un outil (boutons de la palette). */
-export function glyphSvg(type, value, colorId) {
-  const color = COLOR_BY_ID[colorId] || COLORS[3];
+export function glyphSvg(type, value, colorId, round = false) {
+  const color = COLOR_BY_ID[colorId] || COLOR_BY_ID.rouge;
+  const hex = color.hex;
+  const corner = round ? 12 : 0; // rayon d'arrondi des petits carrés de la palette
+  // identifiant propre à chaque bouton : un motif défini dans un groupe masqué (display:none) ne s'afficherait pas ailleurs
+  const hatchId = `mk-hatch-glyph-${color.id}-${type}-${round ? 'r' : 's'}`;
+  // trait plus gros et plus espacé que sur l'échiquier : lisible dans un petit bouton
+  const hatchDefs = `<defs>${hatchPattern(hatchId, color, 13, 5)}</defs>`;
   let inner;
   if (TWO_CLICK.has(type)) inner = linkFragment(type, 20, 80, 80, 20, color, true);
-  else if (type === 'fill') inner = `<rect x="12" y="12" width="76" height="76" fill="${color.hex}" fill-opacity=".5"/>`;
-  else if (type === 'zone') inner = `<rect x="15" y="15" width="70" height="70" fill="${color.hex}" fill-opacity=".5" stroke="${color.hex}" stroke-width="6"/>`;
-  else if (type === 'hatch') {
-    const id = 'mk-hatch-glyph-' + color.id;
-    inner =
-      `<defs>${hatchPattern(id, color, 13, 5)}</defs>` + // trait plus gros et plus espacé que sur l'échiquier : lisible dans un petit bouton
-      `<rect x="15" y="15" width="70" height="70" fill="url(#${id})" stroke="${color.hex}" stroke-width="6"/>`;
-  } else inner = squareFragment({ type, value }, color);
+  else if (type === 'border') inner = `<rect x="14" y="14" width="72" height="72" rx="${corner}" fill="none" stroke="${hex}" stroke-width="8"/>`;
+  else if (type === 'fill') inner = `<rect x="10" y="10" width="80" height="80" rx="${corner}" fill="${hex}" fill-opacity=".5"/>`;
+  else if (type === 'zone') inner = `<rect x="14" y="14" width="72" height="72" rx="${corner}" fill="${hex}" fill-opacity=".5" stroke="${hex}" stroke-width="8"/>`;
+  else if (type === 'shade') inner = `${hatchDefs}<rect x="10" y="10" width="80" height="80" rx="${corner}" fill="url(#${hatchId})"/>`;
+  else if (type === 'hatch') inner = `${hatchDefs}<rect x="14" y="14" width="72" height="72" rx="${corner}" fill="url(#${hatchId})" stroke="${hex}" stroke-width="8"/>`;
+  else inner = squareFragment({ type, value }, color);
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" aria-hidden="true">${inner}</svg>`;
 }
