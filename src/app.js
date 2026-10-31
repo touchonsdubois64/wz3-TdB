@@ -2641,8 +2641,8 @@ function setupMoveAnnotations() {
   });
   add('Symbole', 'Ajouter un symbole de commentaire échiquéen standard au coup sélectionné', () => {
     if (!currentNode || !currentNode.parent) { showMessage('Sélectionnez un coup dans la notation pour lui associer un symbole.', 'info', pgnMessage); return; }
-    const choices = MOVE_NAGS.map(item => item.nag + ' — ' + item.label).join('\\n');
-    const answer = window.prompt('Numéro du symbole à ajouter :\\n' + choices, String((currentNode.nags || [])[0] || 1));
+    const choices = MOVE_NAGS.map(item => item.nag + ' — ' + item.label).join('\n');
+    const answer = window.prompt('Numéro du symbole à ajouter :\n' + choices, String((currentNode.nags || [])[0] || 1));
     if (answer === null) return;
     const nag = Number(answer.trim());
     if (!MOVE_NAGS.some(item => item.nag === nag)) { showMessage('Symbole inconnu. Choisissez un numéro de la liste.', 'error', pgnMessage); return; }
