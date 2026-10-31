@@ -168,11 +168,12 @@ const initStudioUi = () => {
   for (const [id, button] of buttons) button.addEventListener('click', () => openCategory(id));
 
   document.addEventListener('pointerdown', (event) => {
-    if (drawer.hidden || toolbar.contains(event.target) || drawer.contains(event.target)) return;
+    if ((drawer.hidden && positionTools.hidden) || toolbar.contains(event.target) ||
+        drawer.contains(event.target) || positionTools.contains(event.target)) return;
     closeDrawer();
   });
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && !drawer.hidden) closeDrawer();
+    if (event.key === 'Escape' && (!drawer.hidden || !positionTools.hidden)) closeDrawer();
   });
 
   // Après chargement/validation d'une position, le panneau Position se replie.
