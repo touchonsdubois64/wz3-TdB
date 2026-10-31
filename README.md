@@ -66,7 +66,7 @@ correspondantes. Le lecteur de cours accepte aussi les coups nuls successifs
 
 
 
-Les commandes **Commentaire** et **Symbole** permettent d'ajouter un commentaire textuel au nœud sélectionné et les symboles échiquéens standards (`!`, `?`, `!!`, `??`, `!?`, `?!`, `=`, `+=`, `=+`, `+−`, `−+`, `±`, `∓`). Ils sont exportés en PGN sous forme de commentaires et de NAG (`$n`). L'import/export PGN conserve également les variantes et les directives non graphiques reconnues comme `[%eval]` et `[%clk]`. La compatibilité reste sémantique, pas octet pour octet, pour les PGN arbitraires.
+Les commandes **Commentaire** et **Symbole** permettent d'ajouter un commentaire multilignes au nœud sélectionné et de choisir dans un catalogue de NAG PGN : appréciations de coups (`$1` à `$9`), évaluations de position (`$10` à `$23`), espace et développement (`$24` à `$35`), initiative et attaque (`$36` à `$41`), compensation matérielle (`$42` à `$47`). Le catalogue comprend notamment le coup forcé, le seul coup raisonnable, le zugzwang des Blancs ou des Noirs et les différents degrés de compensation. Les codes numériques sont conservés dans le PGN. L'import/export PGN conserve également les variantes et les directives non graphiques reconnues comme `[%eval]` et `[%clk]`. La compatibilité reste sémantique, pas octet pour octet, pour les PGN arbitraires.
 
 Cette intégration reste expérimentale. La suite de tests et la compilation
 sont exécutées par l'intégration continue GitHub Actions ; cela ne remplace pas
