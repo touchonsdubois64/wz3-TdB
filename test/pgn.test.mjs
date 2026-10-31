@@ -145,3 +145,10 @@ test('plusieurs coups nuls successifs restent navigables par chemin UCI', () => 
   assert.equal(afterQueenMove.move.san, 'Qd2');
   assert.equal(findPgnNodeByPath(parsed.root, ['0000', '0000', 'a1a2']), null);
 });
+
+
+test('les commentaires PGN conservent les paragraphes multilignes', () => {
+  const r = parsePgn('1. e4 {Idée principale\\n\\nDeuxième idée} e5 *', Chess);
+  assert.equal(r.error, null);
+  assert.equal(r.root.children[0].note, 'Idée principale\\n\\nDeuxième idée');
+});
