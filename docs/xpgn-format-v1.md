@@ -89,6 +89,12 @@ Chaque entrée comporte :
 
 La version 1 réutilise les types et couleurs du système d'annotations actuel de XPGN Studio (formes, textes, figurines, zones, traits et flèches). Le validateur de cette première implémentation vérifie les objets en les faisant passer par l'encodeur/décodeur existant.
 
+### Annotations graphiques persistantes dans une ligne
+
+L'éditeur conserve pour chaque nœud de la partie un instantané des annotations visibles à cette position. Lorsqu'une annotation est ajoutée, modifiée ou retirée, la différence est propagée aux nœuds descendants déjà présents, dans chaque variante ; les annotations propres à ces variantes sont conservées. Les coups créés ensuite héritent de l'instantané de leur position parente. Retirer un élément à une position le retire donc à cette position et aux suivantes, sans modifier les positions précédentes. Le lecteur n'a pas d'outil d'édition pour cette fonction : il affiche l'instantané enregistré sur chaque nœud et permet de naviguer dans la partie.
+
+Pour rester compatible avec XPGN v1, cette persistance est sérialisée sous forme d'annotations exactes répétées sur les chemins des nœuds concernés. Le champ scope reste branch: node ; aucun comportement descendant implicite ni nouveau champ de portée n'est nécessaire à la lecture des anciens documents.
+
 ### Temporalité
 
 En v1, `branch` vaut obligatoirement `"node"` et l'annotation ne s'affiche que sur la position désignée. `durationPlies` est un entier positif ou nul réservé à l'évolution du lecteur ; la valeur non nulle est conservée dans le document mais n'étend pas encore l'affichage. Il ne faut donc pas interpréter cette propriété comme une fonctionnalité déjà implémentée.
