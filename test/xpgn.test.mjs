@@ -148,7 +148,7 @@ test('le validateur refuse les références de jeu et les identifiants de bloc i
 
 
 test('un chemin XPGN peut traverser plusieurs coups nuls', () => {
-  const pgn = '[SetUp "1"]\\n[FEN "8/8/8/4k3/8/8/8/K2Q4 w - - 0 1"]\\n\\n1. -- -- *';
+  const pgn = '[SetUp "1"]\n[FEN "8/8/8/4k3/8/8/8/K2Q4 w - - 0 1"]\n\n1. -- -- *';
   const parsed = parsePgn(pgn, Chess);
   assert.equal(parsed.error, null);
   const secondPass = parsed.root.children[0].children[0];
