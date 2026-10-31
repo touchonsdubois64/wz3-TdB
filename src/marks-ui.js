@@ -33,16 +33,24 @@ const PICT = {
     `<img src="${asset('pieces/alpha/wN.svg')}" alt=""><img src="${asset('pieces/alpha/bR.svg')}" alt="">`,
   formes:
     '<svg viewBox="0 0 64 32" aria-hidden="true"><circle cx="16" cy="16" r="11" fill="none" stroke="currentColor" stroke-width="3.5"/><polygon points="48,5 60,27 36,27" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/></svg>',
-  contours:
+  // deux cases entourées d'un rectangle rouge, sans liseré blanc : coins droits, puis coins arrondis
+  coinsDroits:
     '<svg viewBox="0 0 64 32" aria-hidden="true"><rect x="6" y="6" width="26" height="20" fill="#fff" stroke="#9a9a9a" stroke-width="1"/><rect x="32" y="6" width="26" height="20" fill="#b9b9b9"/><rect x="2" y="2" width="60" height="28" fill="none" stroke="#e02424" stroke-width="4"/></svg>',
-  zones:
-    '<svg viewBox="0 0 64 32" aria-hidden="true"><rect x="6" y="6" width="26" height="20" fill="#fff" stroke="#9a9a9a" stroke-width="1"/><rect x="32" y="6" width="26" height="20" fill="#b9b9b9"/><rect x="2" y="2" width="60" height="28" fill="#e02424" fill-opacity=".5" stroke="#e02424" stroke-width="4"/></svg>',
+  coinsArrondis:
+    '<svg viewBox="0 0 64 32" aria-hidden="true"><rect x="6" y="6" width="26" height="20" fill="#fff" stroke="#9a9a9a" stroke-width="1"/><rect x="32" y="6" width="26" height="20" fill="#b9b9b9"/><rect x="2" y="2" width="60" height="28" rx="8" fill="none" stroke="#e02424" stroke-width="4"/></svg>',
 };
 
 const PIECE_NAMES = { K: 'Roi', Q: 'Dame', R: 'Tour', B: 'Fou', N: 'Cavalier', P: 'Pion' };
 
-// outils du groupe « Zones » : colorée avec bordure, colorée sans bordure, hachurée
-const ZONE_TOOLS = ['zone', 'fill', 'hatch'];
+// les cinq options d'une zone, une fois choisi le type de bordure (coins droits ou arrondis)
+const ZONE_OPTIONS = [
+  { type: 'border', label: 'Zone avec bordure seule' },
+  { type: 'fill', label: 'Zone avec couleur seule, sans bordure' },
+  { type: 'zone', label: 'Zone avec bordure et intérieur coloré' },
+  { type: 'shade', label: 'Zone avec hachures seules, sans bordure' },
+  { type: 'hatch', label: 'Zone avec bordure et intérieur hachuré' },
+];
+const ZONE_TOOLS = ZONE_OPTIONS.map((option) => option.type);
 
 /** Télécharge un texte (UTF-8 avec BOM, lignes à la mode Windows) sous le nom donné. */
 function downloadText(filename, text) {
@@ -72,7 +80,7 @@ export function setupMarks({ layer, panel, buttons, isWhite, onActiveChange, onI
   let saveButton = null;
   let active = false;
   let colorId = 'rouge';
-  let tool = { type: 'shape', value: 'circle' };
+  let tool = { type: 'shape', value: 'circle', round: false };
   let previousTool = tool; // pour revenir de la gomme
   let arrowStart = null;
 
@@ -107,20 +115,20 @@ export function setupMarks({ layer, panel, buttons, isWhite, onActiveChange, onI
     downloadText(exportFilename(info.title), text);
   }
 
-  const isSelected = (entry) => tool.type === entry.type && tool.value === entry.value;
+  const isSelected = (entry) => tool.type === entry.type && tool.value === entry.value && tool.round === Boolean(entry.round);
 
   function refreshButtons() {
     colorButtons.forEach(({ element, id }) => element.classList.toggle('selected', id === colorId));
     toolButtons.forEach((entry) => {
       entry.element.classList.toggle('selected', isSelected(entry));
-      if (entry.preview) entry.element.innerHTML = glyphSvg(entry.type, entry.value, colorId);
+      if (entry.preview) entry.element.innerHTML = glyphSvg(entry.type, entry.value, colorId, entry.round);
     });
     if (eraserButton) eraserButton.classList.toggle('selected', tool.type === 'erase');
   }
 
-  function selectTool(type, value = '') {
-    if (type !== 'erase') previousTool = { type, value };
-    tool = { type, value };
+  function selectTool(type, value = '', round = false) {
+    if (type !== 'erase') previousTool = { type, value, round };
+    tool = { type, value, round };
     arrowStart = null;
     refreshButtons();
     render();
@@ -164,9 +172,7 @@ export function setupMarks({ layer, panel, buttons, isWhite, onActiveChange, onI
   // 2 et 3. onglets des groupes
   const tabsA = addRow('marks-tabs');
   const tabsB = addRow('marks-tabs');
-  // 4. actions
-  const actionsRow = addRow('marks-tabs');
-  // 5. contenu du groupe choisi
+  // 4. contenu du groupe choisi
   const content = addRow('marks-content');
   content.classList.remove('marks-row');
 
@@ -177,8 +183,10 @@ export function setupMarks({ layer, panel, buttons, isWhite, onActiveChange, onI
     }
     // ces groupes ont un outil par défaut, choisi d'office (sauf si l'un de leurs outils est déjà actif)
     if (id === 'texte') selectTool('label');
-    if (id === 'contours') selectTool('border');
-    if (id === 'zones' && !ZONE_TOOLS.includes(tool.type)) selectTool('zone');
+    if (id === 'zones-droites' || id === 'zones-arrondies') {
+      // même option que précédemment si c'était une zone, avec le style de coins du groupe ; sinon « bordure et couleur »
+      selectTool(ZONE_TOOLS.includes(tool.type) ? tool.type : 'zone', '', id === 'zones-arrondies');
+    }
   }
 
   function addGroup(id, label, tabsRow, pictogram = null) {
@@ -196,7 +204,7 @@ export function setupMarks({ layer, panel, buttons, isWhite, onActiveChange, onI
     return body;
   }
 
-  function addTool(parent, type, value, { label, preview = false, text = null, html = null }) {
+  function addTool(parent, type, value, { label, preview = false, text = null, html = null, round = false }) {
     const element = document.createElement('button');
     element.type = 'button';
     element.className = 'marks-tool';
@@ -204,9 +212,9 @@ export function setupMarks({ layer, panel, buttons, isWhite, onActiveChange, onI
     element.setAttribute('aria-label', label);
     if (text !== null) element.textContent = text;
     if (html !== null) element.innerHTML = html;
-    element.addEventListener('click', () => selectTool(type, value));
+    element.addEventListener('click', () => selectTool(type, value, round));
     parent.appendChild(element);
-    toolButtons.push({ element, type, value, preview });
+    toolButtons.push({ element, type, value, preview, round });
   }
 
   const flowRow = (parent) => {
@@ -263,27 +271,26 @@ export function setupMarks({ layer, panel, buttons, isWhite, onActiveChange, onI
   const shapesRow = flowRow(shapes);
   for (const shape of SHAPES) addTool(shapesRow, shape.type, shape.value, { label: shape.label, preview: true });
 
-  // bordures
-  const borders = addGroup('contours', 'Contours', tabsB, PICT.contours);
-  const borderHint = document.createElement('p');
-  borderHint.className = 'marks-hint';
-  borderHint.textContent =
-    'Cliquez les cases de la zone à entourer : seul le contour extérieur est tracé (un clic de plus retire la case).';
-  borders.appendChild(borderHint);
+  // zones : on choisit d'abord le type de bordure (coins droits ou arrondis), puis l'une des cinq options
+  for (const [id, label, pictogram, round] of [
+    ['zones-droites', 'Zones à coins droits', PICT.coinsDroits, false],
+    ['zones-arrondies', 'Zones à coins arrondis', PICT.coinsArrondis, true],
+  ]) {
+    const group = addGroup(id, label, tabsB, pictogram);
+    const row = flowRow(group);
+    for (const option of ZONE_OPTIONS) addTool(row, option.type, '', { label: option.label + (round ? ' (coins arrondis)' : ' (coins droits)'), preview: true, round });
+    const hint = document.createElement('p');
+    hint.className = 'marks-hint';
+    hint.textContent =
+      'Cliquez les cases de la zone : les cases voisines fusionnent (un clic de plus retire la case). Deux zones superposées mélangent leurs couleurs.';
+    group.appendChild(hint);
+  }
 
-  // zones : coloration à moitié transparente (avec ou sans bordure) ou hachurage
-  const zones = addGroup('zones', 'Zones', tabsB, PICT.zones);
-  const zonesRow = flowRow(zones);
-  addTool(zonesRow, 'zone', '', { label: 'Zone colorée à moitié transparente, avec bordure', preview: true });
-  addTool(zonesRow, 'fill', '', { label: 'Zone colorée à moitié transparente, sans bordure', preview: true });
-  addTool(zonesRow, 'hatch', '', { label: 'Zone hachurée, avec bordure', preview: true });
-  const zoneHint = document.createElement('p');
-  zoneHint.className = 'marks-hint';
-  zoneHint.textContent =
-    'Cliquez les cases de la zone : les cases voisines fusionnent (un clic de plus retire la case). Deux zones superposées mélangent leurs couleurs.';
-  zones.appendChild(zoneHint);
-
-  // 4. gomme, effacer tout, fermer
+  // 5. pied de barre : gomme et « effacer tout » en bas à gauche, enregistrement en bas à droite
+  const footer = addRow('marks-footer');
+  const footerLeft = document.createElement('div');
+  footerLeft.className = 'marks-footer-left';
+  footer.appendChild(footerLeft);
   eraserButton = document.createElement('button');
   eraserButton.type = 'button';
   eraserButton.className = 'marks-tab marks-eraser';
@@ -293,11 +300,8 @@ export function setupMarks({ layer, panel, buttons, isWhite, onActiveChange, onI
     if (tool.type === 'erase') selectTool(previousTool.type, previousTool.value);
     else selectTool('erase');
   });
-  actionsRow.appendChild(eraserButton);
-  addButton(actionsRow, 'marks-tab', 'Effacer tout', () => api.clear());
-
-  // 6. enregistrement : coin inférieur droit de la barre
-  const footer = addRow('marks-footer');
+  footerLeft.appendChild(eraserButton);
+  addButton(footerLeft, 'marks-tab', 'Effacer tout', () => api.clear());
   saveButton = document.createElement('button');
   saveButton.type = 'button';
   saveButton.className = 'marks-tab marks-save';
@@ -362,10 +366,8 @@ export function setupMarks({ layer, panel, buttons, isWhite, onActiveChange, onI
           marks.toggleLink(tool.type, arrowStart, key, colorId);
           arrowStart = null;
         }
-      } else if (tool.type === 'border') {
-        marks.toggleBorder(key, colorId);
       } else if (ZONE_TOOLS.includes(tool.type)) {
-        marks.toggleZone(key, colorId, tool.type);
+        marks.toggleZone(key, colorId, tool.type, tool.round);
       } else if (tool.type === 'label') {
         const text = labelInput.value.trim();
         if (!text) {
