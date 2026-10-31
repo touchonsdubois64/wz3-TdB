@@ -2832,6 +2832,36 @@ function setupCourseAuthoring() {
     dialog.showModal();
   });
   $('.notation-control').append(button);
+
+  const addPositionButton = document.createElement('button');
+  addPositionButton.type = 'button';
+  addPositionButton.className = 'export-pgn-button xpgn-action-button';
+  addPositionButton.textContent = 'Ajouter une position';
+  addPositionButton.title = 'Ajouter la position affichée au dernier chapitre du cours';
+  addPositionButton.addEventListener('click', () => {
+    if (!currentXpgnCourse || !currentXpgnCourse.chapters.length) {
+      showMessage('Créez ou ouvrez d’abord un cours XPGN.', 'info', pgnMessage);
+      return;
+    }
+    if (!locked || !currentNode) {
+      showMessage('Affichez d’abord une position de partie sur l’échiquier.', 'info', pgnMessage);
+      return;
+    }
+    const chapter = currentXpgnCourse.chapters[currentXpgnCourse.chapters.length - 1];
+    const usedIds = new Set(chapter.blocks.map(block => block.id).filter(Boolean));
+    let suffix = chapter.blocks.length + 1;
+    let id = 'position-' + suffix;
+    while (usedIds.has(id)) id = 'position-' + (++suffix);
+    chapter.blocks.push({
+      id,
+      type: 'diagram',
+      position: { fen: game.fen() },
+      caption: 'Position ' + (chapter.blocks.filter(block => block.type === 'diagram' || block.type === 'exercise').length + 1),
+    });
+    showCourseReader();
+    showMessage('Position ajoutée au chapitre « ' + chapter.title + ' ». Vous pouvez en ajouter d’autres après avoir navigué dans la partie.', 'success', pgnMessage);
+  });
+  $('.notation-control').append(addPositionButton);
 }
 
 // ==================================================
