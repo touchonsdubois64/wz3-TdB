@@ -3,7 +3,7 @@
 // Couche d’interface isolée : les fonctions existantes restent inchangées.
 // ==================================================
 
-(() => {
+const initStudioUi = () => {
   const wide = window.matchMedia(
     '(orientation: landscape) and (min-width: 1260px) and (min-height: 520px), ' +
     '(orientation: landscape) and (pointer: coarse) and (min-width: 600px) and (max-height: 520px)'
@@ -79,6 +79,7 @@
 
   // Réglages : paramètres visuels et style de notation.
   take('.cell-settings', 'settings');
+  take('.notation-native-select', 'settings');
   take('.notation-menu', 'settings');
 
   // Création : le formulaire de cours déjà présent dans Studio.
@@ -163,4 +164,10 @@
   for (const button of panels.get('save').content.querySelectorAll('button')) {
     button.addEventListener('click', () => window.setTimeout(closeDrawer, 180));
   }
-})();
+};
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initStudioUi, { once: true });
+} else {
+  initStudioUi();
+}
