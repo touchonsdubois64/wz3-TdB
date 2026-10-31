@@ -117,7 +117,10 @@
           <div id="marks-layer" class="marks-layer" aria-hidden="true"></div>
           <div class="file-labels"></div>
         </div>
-        <div class="turn-indicators landscape-only" aria-hidden="true"><span id="turn-disc" class="turn-disc"></span></div>
+        <div class="turn-indicators landscape-only" role="group" aria-label="Choisir le camp au trait">
+          <button id="turn-white" class="turn-disc white" type="button" aria-label="Trait aux Blancs" aria-pressed="false" title="Trait aux Blancs"></button>
+          <button id="turn-black" class="turn-disc black" type="button" aria-label="Trait aux Noirs" aria-pressed="false" title="Trait aux Noirs"></button>
+        </div>
       </div>
 
       <div class="navigation">
