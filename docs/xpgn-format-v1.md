@@ -93,6 +93,12 @@ La version 1 réutilise les types et couleurs du système d'annotations actuel d
 
 En v1, `branch` vaut obligatoirement `"node"` et l'annotation ne s'affiche que sur la position désignée. `durationPlies` est un entier positif ou nul réservé à l'évolution du lecteur ; la valeur non nulle est conservée dans le document mais n'étend pas encore l'affichage. Il ne faut donc pas interpréter cette propriété comme une fonctionnalité déjà implémentée.
 
+### Symboles d'évaluation PGN (NAG)
+
+Les annotations de coups utilisent les codes NAG numériques du PGN. Le catalogue de Studio comprend les appréciations de coups ($1 à $9), les évaluations de position ($10 à $23) et des indications descriptives sélectionnées : espace et développement ($24 à $35), initiative et attaque ($36 à $41), compensation matérielle ($42 à $47). Les codes sont stockés tels quels dans le PGN ; leur rendu graphique est une aide de lecture et ne remplace pas le code. Les NAG $22 et $23 distinguent le zugzwang des Blancs et des Noirs ; $8 désigne le coup singulier, seul coup raisonnable ; $44 et $45 indiquent une compensation matérielle suffisante.
+
+Références de la table NAG : [spécification PGN commentée](https://github.com/mliebelt/pgn-spec-commented/blob/main/pgn-specification.md) et [table de symboles d'évaluation RPB Chessboard](https://rpb-chessboard.yo35.org/documentation/chess-assessment-symbols/).
+
 ## 6. Robustesse et compatibilité
 
 - Une version inconnue doit être refusée explicitement.
