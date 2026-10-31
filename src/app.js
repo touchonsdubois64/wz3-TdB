@@ -2413,7 +2413,9 @@ function downloadXpgn() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'partie.xpgn';
+    const documentTitle = currentXpgnCourse && currentXpgnCourse.title ? currentXpgnCourse.title : (positionTitle || 'partie');
+    const safeName = documentTitle.normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 70) || 'partie';
+    link.download = safeName + '.xpgn';
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -2577,28 +2579,12 @@ function renderCourseChapter(index) {
         navigate.type = 'button';
         navigate.className = 'xpgn-course-navigate';
         navigate.textContent = 'Afficher sur l’échiquier';
-        if (block.position.path) {
-          const gameId = block.position.gameId;
-          const gameEntry = gameId ? currentXpgnGames.find(item => item.id === gameId) : null;
-          const sourcePgn = gameId ? (gameEntry && gameEntry.pgn) : currentXpgnMainPgn;
-          let target = null;
-          if (!gameId && rootNode) {
-            target = findPgnNodeByPath(rootNode, block.position.path);
-          } else if (sourcePgn) {
-            const parsed = parsePgn(sourcePgn, Chess);
-            if (!parsed.error) target = findPgnNodeByPath(parsed.root, block.position.path);
-          }
+        if (block.position.path && !block.position.gameId && rootNode) {
+          const target = findPgnNodeByPath(rootNode, block.position.path);
           if (target) {
             navigate.addEventListener('click', () => {
               courseReaderDialog.close();
-              if (gameId && sourcePgn) {
-                if (!loadPgn(sourcePgn, { strict: true, preserveCourse: true })) {
-                  showMessage('Impossible d’ouvrir la partie référencée par ce diagramme.', 'error', pgnMessage);
-                  return;
-                }
-                target = findPgnNodeByPath(rootNode, block.position.path);
-              }
-              if (target) showNode(target);
+              showNode(target);
             });
             section.appendChild(navigate);
           }
