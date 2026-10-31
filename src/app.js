@@ -2627,27 +2627,96 @@ function showCourseReader() {
 function setupMoveAnnotations() {
   const add = (label, title, action) => {
     const button = document.createElement('button');
-    button.type = 'button'; button.className = 'export-pgn-button xpgn-action-button';
-    button.textContent = label; button.title = title; button.addEventListener('click', action);
+    button.type = 'button';
+    button.className = 'export-pgn-button xpgn-action-button';
+    button.textContent = label;
+    button.title = title;
+    button.addEventListener('click', action);
     $('.notation-control').append(button);
   };
-  add('Commentaire', 'Ajouter ou modifier le commentaire du coup ou de la position sélectionnée', () => {
-    if (!currentNode) { showMessage('Sélectionnez une partie ou une position avant d’ajouter un commentaire.', 'info', pgnMessage); return; }
-    const value = window.prompt('Commentaire associé à cette position :', currentNode.note || '');
-    if (value === null) return;
-    currentNode.note = value.trim();
+
+  // Commentaires multilignes : le texte est rattaché à la position sélectionnée.
+  const commentDialog = document.createElement('dialog');
+  commentDialog.className = 'xpgn-course-dialog';
+  commentDialog.innerHTML = `
+    <form class="xpgn-course-form">
+      <div class="xpgn-course-head"><h2>Commentaire de la position</h2><button type="button" class="xpgn-course-close" aria-label="Fermer">×</button></div>
+      <label for="xpgn-move-comment">Commentaire (plusieurs lignes possibles)
+        <textarea id="xpgn-move-comment" name="comment" rows="8" maxlength="20000" placeholder="Décrivez l’idée, le plan ou l’évaluation de la position…"></textarea>
+      </label>
+      <div class="xpgn-course-actions"><button type="button" class="xpgn-comment-cancel">Annuler</button><button type="submit">Enregistrer</button></div>
+    </form>`;
+  document.body.appendChild(commentDialog);
+  const commentForm = commentDialog.querySelector('form');
+  const commentText = commentForm.elements.namedItem('comment');
+  const closeComment = () => commentDialog.close();
+  commentDialog.querySelector('.xpgn-course-close').addEventListener('click', closeComment);
+  commentDialog.querySelector('.xpgn-comment-cancel').addEventListener('click', closeComment);
+  commentForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    if (!currentNode) return;
+    currentNode.note = commentText.value.trim();
     updateMoves();
-    afterPosition();
+    closeComment();
   });
-  add('Symbole', 'Ajouter un symbole de commentaire échiquéen standard au coup sélectionné', () => {
-    if (!currentNode || !currentNode.parent) { showMessage('Sélectionnez un coup dans la notation pour lui associer un symbole.', 'info', pgnMessage); return; }
-    const choices = MOVE_NAGS.map(item => item.nag + ' — ' + item.label).join('\n');
-    const answer = window.prompt('Numéro du symbole à ajouter :\n' + choices, String((currentNode.nags || [])[0] || 1));
-    if (answer === null) return;
-    const nag = Number(answer.trim());
-    if (!MOVE_NAGS.some(item => item.nag === nag)) { showMessage('Symbole inconnu. Choisissez un numéro de la liste.', 'error', pgnMessage); return; }
+
+  add('Commentaire', 'Rédiger un commentaire multilignes sur la position sélectionnée', () => {
+    if (!currentNode) {
+      showMessage('Sélectionnez une partie ou une position avant d’ajouter un commentaire.', 'info', pgnMessage);
+      return;
+    }
+    commentText.value = currentNode.note || '';
+    commentDialog.showModal();
+    commentText.focus();
+  });
+
+  // Sélecteur NAG : codes PGN standards, ajout et retrait sans saisie de numéro.
+  const nagDialog = document.createElement('dialog');
+  nagDialog.className = 'xpgn-course-dialog';
+  nagDialog.innerHTML = `
+    <form class="xpgn-course-form">
+      <div class="xpgn-course-head"><h2>Symbole d’évaluation</h2><button type="button" class="xpgn-course-close" aria-label="Fermer">×</button></div>
+      <label for="xpgn-move-nag">Symbole PGN (NAG)
+        <select id="xpgn-move-nag" name="nag"></select>
+      </label>
+      <p class="xpgn-course-note">Les symboles sont enregistrés sous leur code NAG PGN pour rester compatibles avec les autres logiciels d’échecs.</p>
+      <div class="xpgn-course-actions"><button type="button" class="xpgn-nag-remove">Retirer ce symbole</button><button type="button" class="xpgn-nag-cancel">Fermer</button><button type="submit">Ajouter</button></div>
+    </form>`;
+  document.body.appendChild(nagDialog);
+  const nagForm = nagDialog.querySelector('form');
+  const nagSelect = nagForm.elements.namedItem('nag');
+  for (const item of MOVE_NAGS) {
+    const option = document.createElement('option');
+    option.value = String(item.nag);
+    option.textContent = '$' + item.nag + ' — ' + item.label;
+    nagSelect.appendChild(option);
+  }
+  const closeNag = () => nagDialog.close();
+  nagDialog.querySelector('.xpgn-course-close').addEventListener('click', closeNag);
+  nagDialog.querySelector('.xpgn-nag-cancel').addEventListener('click', closeNag);
+  nagForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    if (!currentNode || !currentNode.parent) return;
+    const nag = Number(nagSelect.value);
     currentNode.nags = [...new Set([...(currentNode.nags || []), nag])];
     updateMoves();
+    closeNag();
+  });
+  nagDialog.querySelector('.xpgn-nag-remove').addEventListener('click', () => {
+    if (!currentNode || !currentNode.parent) return;
+    const nag = Number(nagSelect.value);
+    currentNode.nags = (currentNode.nags || []).filter((value) => value !== nag);
+    updateMoves();
+    closeNag();
+  });
+
+  add('Symbole', 'Choisir un symbole d’évaluation PGN pour le coup sélectionné', () => {
+    if (!currentNode || !currentNode.parent) {
+      showMessage('Sélectionnez un coup dans la notation pour lui associer un symbole.', 'info', pgnMessage);
+      return;
+    }
+    nagSelect.value = String((currentNode.nags || [])[0] || 1);
+    nagDialog.showModal();
   });
 }
 
