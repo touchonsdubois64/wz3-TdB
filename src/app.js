@@ -171,8 +171,10 @@ function placeBlocks() {
   const moves = $('#moves');
   const title = $('#library-title');
   if (landscapeQuery.matches) {
-    $('#frame-right').append(notation, panel, moves);
-    $('.left').prepend(title); // titre de la position : au-dessus de l'échiquier
+    $('#frame-right').append(notation, moves);
+    // La palette graphique reste au-dessus de l'échiquier : elle ne masque plus
+    // les cases et le clic sur une case ne peut donc pas la faire disparaître.
+    $('.left').prepend(panel, title);
   } else {
     $('.left').append(panel, moves, notation);
     $('.cell-library').append(title);
