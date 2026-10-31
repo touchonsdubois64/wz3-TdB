@@ -170,7 +170,6 @@ export function setupMarks({ layer, panel, buttons, isWhite, onActiveChange, onI
     collapseButton.setAttribute('aria-label', collapseButton.title);
     collapseButton.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
   });
-  colorsRow.appendChild(collapseButton);
   for (const color of COLORS) {
     const element = document.createElement('button');
     element.type = 'button';
@@ -185,6 +184,7 @@ export function setupMarks({ layer, panel, buttons, isWhite, onActiveChange, onI
     colorsRow.appendChild(element);
     colorButtons.push({ element, id: color.id });
   }
+  colorsRow.appendChild(collapseButton);
 
   // 2 et 3. onglets des groupes
   const tabsA = addRow('marks-tabs');
@@ -229,7 +229,15 @@ export function setupMarks({ layer, panel, buttons, isWhite, onActiveChange, onI
     element.setAttribute('aria-label', label);
     if (text !== null) element.textContent = text;
     if (html !== null) element.innerHTML = html;
-    element.addEventListener('click', () => selectTool(type, value, round));
+    element.addEventListener('click', () => {
+      selectTool(type, value, round);
+      if (!active) {
+        active = true;
+        panel.hidden = false;
+        document.body.classList.add('marking');
+        if (onActiveChange) onActiveChange(true);
+      }
+    });
     parent.appendChild(element);
     toolButtons.push({ element, type, value, preview, round });
   }
