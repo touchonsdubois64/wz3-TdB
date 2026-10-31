@@ -2819,6 +2819,13 @@ function setupMoveAnnotations() {
       nagDialog.showModal();
     }
   });
+  $('#moves').addEventListener('contextmenu', event => {
+    if (event.target.closest('.move-text') || !currentNode) return;
+    event.preventDefault();
+    document.dispatchEvent(new CustomEvent('xpgn:move-context', {
+      detail: { node: currentNode, x: event.clientX, y: event.clientY },
+    }));
+  });
   document.addEventListener('xpgn:move-context', event => {
     const node = event.detail && event.detail.node;
     if (!node) return;
