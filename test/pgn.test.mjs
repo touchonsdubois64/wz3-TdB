@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Chess } from 'chess.js';
-import { parsePgn } from '../src/pgn.js';
+import { findPgnNodeByPath, parsePgn } from '../src/pgn.js';
 
 const line = (node) => { const out = []; for (let n = node; n.children.length; n = n.children[0]) out.push(n.children[0].move.san); return out; };
 
@@ -128,4 +128,20 @@ test('conserve les NAG et les directives PGN non graphiques', () => {
   assert.equal(e4.note, 'bonne idée');
   assert.deepEqual(e4.children[0].nags, [6]);
   assert.deepEqual(e4.children[1].nags, [5]);
+});
+
+
+test('plusieurs coups nuls successifs restent navigables par chemin UCI', () => {
+  const fen = '8/8/8/4k3/8/8/8/K2Q4 w - - 0 1';
+  const parsed = parsePgn('[SetUp "1"]\\n[FEN "' + fen + '"]\\n\\n1. -- -- 2. Qd2 *', Chess);
+  assert.equal(parsed.error, null);
+  assert.equal(parsed.moveCount, 3);
+  const afterTwoPasses = findPgnNodeByPath(parsed.root, ['0000', '0000']);
+  assert.ok(afterTwoPasses);
+  assert.equal(afterTwoPasses.move.nullMove, true);
+  assert.match(afterTwoPasses.fen, / w /);
+  const afterQueenMove = findPgnNodeByPath(parsed.root, ['0000', '0000', 'd1d2']);
+  assert.ok(afterQueenMove);
+  assert.equal(afterQueenMove.move.san, 'Qd2');
+  assert.equal(findPgnNodeByPath(parsed.root, ['0000', '0000', 'a1a2']), null);
 });
