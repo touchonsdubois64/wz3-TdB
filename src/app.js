@@ -17,7 +17,7 @@ import '@lichess-org/chessground/assets/chessground.brown.css';
 import { Chess } from 'chess.js';
 import { fillLabel, plainLabel, setupLibrary } from './library.js';
 import { findPgnNodeByPath, parsePgn } from './pgn.js';
-import { MOVE_NAGS, nagGlyph } from './nags.js';
+import { MOVE_NAGS, nagDisplay } from './nags.js';
 import { setupMarks } from './marks-ui.js';
 import { attachXpgnAnnotations, getXpgnNodePath, parseXpgn, stringifyXpgn } from './xpgn.js';
 import { setupSettings } from './settings.js';
@@ -2149,7 +2149,7 @@ function renderSequence(startNode, container, options = {}) {
     if (nags.length) {
       const badge = document.createElement('span');
       badge.className = 'pgn-nags';
-      badge.textContent = nags.map(nag => nagGlyph(nag) || ('NAG ' + nag)).join(' ');
+      badge.textContent = nags.map(nagDisplay).join(' ');
       container.appendChild(badge);
     }
     if (node.note) {
