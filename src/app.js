@@ -2585,12 +2585,6 @@ function renderCourseChapter(index) {
             });
             section.appendChild(navigate);
           }
-        } else if (block.position.fen) {
-          navigate.addEventListener('click', () => {
-            courseReaderDialog.close();
-            enterGame(block.position.fen);
-          });
-          section.appendChild(navigate);
         }
       } else {
         const note = document.createElement('p');
