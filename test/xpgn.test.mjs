@@ -145,3 +145,19 @@ test('le validateur refuse les références de jeu et les identifiants de bloc i
   badMoves.course.chapters[0].blocks[3].expectedMoves = ['e2-e4'];
   assert.throws(() => validateXpgnDocument(badMoves), /coups UCI invalide/);
 });
+
+
+test('un chemin XPGN peut traverser plusieurs coups nuls', () => {
+  const pgn = '[SetUp "1"]\\n[FEN "8/8/8/4k3/8/8/8/K2Q4 w - - 0 1"]\\n\\n1. -- -- *';
+  const parsed = parsePgn(pgn, Chess);
+  assert.equal(parsed.error, null);
+  const secondPass = parsed.root.children[0].children[0];
+  assert.deepEqual(getXpgnNodePath(secondPass), ['0000', '0000']);
+  const document = sample([{ at: { path: ['0000', '0000'] }, items: [{ type: 'shape', value: 'circle', color: 'rouge', key: 'e4' }] }]);
+  document.game.pgn = pgn;
+  const normalized = parseXpgn(stringifyXpgn(document));
+  const attached = attachXpgnAnnotations(parsed.root, normalized.annotations);
+  assert.equal(attached.attached, 1);
+  assert.equal(attached.unresolved.length, 0);
+  assert.equal(secondPass.xpgnAnnotations[0].key, 'e4');
+});
