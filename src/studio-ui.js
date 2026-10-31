@@ -72,6 +72,13 @@ const initStudioUi = () => {
   app.prepend(toolbar);
   app.appendChild(drawer);
 
+  // Les outils de position se déploient dans le haut du cadre droit, au-dessus de la notation.
+  const positionTools = document.createElement('section');
+  positionTools.className = 'studio-position-tools';
+  positionTools.hidden = true;
+  positionTools.setAttribute('aria-label', 'Chargement et préparation de position');
+  frameRight.prepend(positionTools);
+
   const put = (category, element) => {
     if (element) panels.get(category).content.appendChild(element);
   };
@@ -94,7 +101,8 @@ const initStudioUi = () => {
 
   // Position : bibliothèque, chargement PGN/FEN et montage manuel.
   for (const selector of ['.cell-library', '.cell-pgn', '.cell-fen', '.cell-palette', '.cell-start', '.cell-play', '.cell-hints']) {
-    take(selector, 'position');
+    const element = document.querySelector(selector);
+    if (element) positionTools.appendChild(element);
   }
 
   // Analyse et annotations graphiques : on déplace les éléments existants, sans les recréer.
@@ -117,6 +125,7 @@ const initStudioUi = () => {
     }
     activeCategory = null;
     drawer.hidden = true;
+    positionTools.hidden = true;
     for (const [id, button] of buttons) {
       button.classList.remove('selected');
       button.setAttribute('aria-expanded', 'false');
@@ -130,7 +139,9 @@ const initStudioUi = () => {
       return;
     }
     activeCategory = id;
-    drawer.hidden = false;
+    const isPosition = id === 'position';
+    drawer.hidden = isPosition;
+    positionTools.hidden = !isPosition;
     for (const [key, button] of buttons) {
       const selected = key === id;
       button.classList.toggle('selected', selected);
