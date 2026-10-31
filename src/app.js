@@ -2438,6 +2438,16 @@ function openXpgnFile(file) {
         currentXpgnMainPgn = null;
         currentXpgnCourseOnly = Boolean(currentXpgnCourse);
         if (!currentXpgnCourse) throw new Error('Aucune partie principale ou aucun cours à ouvrir.');
+        // Un cours autonome ne doit pas réutiliser par accident l'arbre PGN
+        // d'une partie ouverte auparavant dans Studio.
+        if (locked) leaveGame();
+        rootNode = null;
+        currentNode = null;
+        currentStartFen = '';
+        suspended = null;
+        marks.setItems([]);
+        updateMoves();
+        updateNavigation();
         showCourseReader();
         showMessage('Cours XPGN ouvert : vous pouvez parcourir ses chapitres et consulter ses diagrammes.', 'success', pgnMessage);
         return;
