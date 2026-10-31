@@ -31,36 +31,43 @@ au moyen d'un chemin de coups UCI. La note de conception et le schéma de cette
 première version sont dans `docs/xpgn-format-v1.md`.
 
 Cette version constitue un socle de travail : Studio sait ouvrir et exporter
-les documents XPGN contenant une partie et ses annotations. La temporalité des
-annotations au-delà d'une position n'est pas encore implémentée.
+les documents XPGN contenant une partie, ses annotations et un cours. Les
+annotations graphiques sont conservées sous forme d'instantanés sur les nœuds :
+dans Studio, une modification est propagée aux positions suivantes des variantes
+déjà présentes ; le lecteur restitue les instantanés et ne propose pas d'édition.
+La version 1 du format conserve des annotations explicites par position, sans
+introduire de portée implicite dans le fichier.
 
 
 ### Création de cours
 
-Le bouton **Nouveau cours** ouvre un premier éditeur de cours : titre, description,
-premier chapitre, texte explicatif et insertion facultative de la position courante
-comme diagramme. Le document est exporté avec le bouton **XPGN**. Le noyau accepte
-également les cours autonomes, les chapitres, les blocs de texte, les diagrammes,
-les exercices à coups attendus en UCI et les parties PGN intégrées. L'interface
-d'édition des exercices, l'ajout de plusieurs chapitres et le lecteur pédagogique
-seront développés progressivement.
+Le bouton **Nouveau cours** ouvre l'éditeur initial : titre, description,
+premier chapitre, texte explicatif et insertion facultative de la position courante.
+Dans le menu Création, Studio permet ensuite d'ajouter des textes, des exercices
+(choix d'un coup disponible dans la position sélectionnée), des chapitres et des
+diagrammes à plusieurs endroits d'un même chapitre. Les positions issues de la
+partie principale sont référencées par leur chemin UCI, ce qui permet au lecteur
+de les retrouver et de les afficher sur l'échiquier. Le lecteur affiche les
+consignes et les solutions d'exercices ; il ne permet pas encore de jouer les
+réponses sur un échiquier d'exercice.
 
 Un exemple de cours autonome est disponible dans
 `examples/cours-comprendre-le-centre.xpgn`.
 
 ### Échange de fichiers XPGN
 
-L'interface propose maintenant les commandes **Ouvrir XPGN** et **XPGN** (export).
-À l'ouverture, le PGN embarqué reconstruit l'arbre de coups et les annotations sont
-rattachées aux positions correspondantes. En naviguant dans les coups et les
-variantes, l'éditeur recharge les annotations du nœud courant. L'export rassemble
-la partie et les annotations de tous les nœuds dans un document `.xpgn`.
+L'interface propose les commandes **Ouvrir XPGN** et **XPGN** (enregistrement).
+Sur les navigateurs compatibles, l'enregistrement ouvre un sélecteur permettant
+de choisir le dossier du projet ; les autres navigateurs lancent un téléchargement
+classique. Le nom proposé reprend le titre du cours. À l'ouverture, le PGN embarqué
+reconstruit l'arbre de coups et les annotations sont rattachées aux positions
+correspondantes. Le lecteur de cours accepte aussi les coups nuls successifs
+(`--` dans le PGN, `0000` dans les chemins UCI) et permet de les parcourir.
 
 
 
 Les commandes **Commentaire** et **Symbole** permettent d'ajouter un commentaire textuel au nœud sélectionné et les symboles échiquéens standards (`!`, `?`, `!!`, `??`, `!?`, `?!`, `=`, `+=`, `=+`, `+−`, `−+`, `±`, `∓`). Ils sont exportés en PGN sous forme de commentaires et de NAG (`$n`). L'import/export PGN conserve également les variantes et les directives non graphiques reconnues comme `[%eval]` et `[%clk]`. La compatibilité reste sémantique, pas octet pour octet, pour les PGN arbitraires.
 
-Cette intégration est encore expérimentale : les annotations XPGN sont attachées
-à une position précise (pas encore de durée ou de propagation automatique), et
-une validation dans un navigateur ainsi que l'exécution complète des tests restent
-nécessaires avant de considérer cette version comme stable.
+Cette intégration reste expérimentale. La suite de tests et la compilation
+sont exécutées par l'intégration continue GitHub Actions ; cela ne remplace pas
+encore une validation manuelle de l'interface dans plusieurs navigateurs.
