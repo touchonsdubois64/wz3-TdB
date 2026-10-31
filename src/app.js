@@ -2766,11 +2766,7 @@ function setupMoveAnnotations() {
     for (const item of MOVE_NAGS.filter((entry) => entry.nag >= group.min && entry.nag <= group.max)) {
       const option = document.createElement('option');
       option.value = String(item.nag);
-      option.textContent = '$' + item.nag + ' — ' + item.label;
-      optgroup.appendChild(option);
-    }
-    if (optgroup.children.length) nagSelect.appendChild(optgroup);
-  }
+      option.textContent = '
   const closeNag = () => nagDialog.close();
   nagDialog.querySelector('.xpgn-course-close').addEventListener('click', closeNag);
   nagDialog.querySelector('.xpgn-nag-cancel').addEventListener('click', closeNag);
