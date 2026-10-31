@@ -86,7 +86,7 @@ const initStudioUi = () => {
   const actionButtons = [...document.querySelectorAll('.notation-control button')];
   for (const button of actionButtons) {
     const label = (button.textContent || '').trim();
-    if (label === 'Nouveau cours') put('create', button);
+    if (label === 'Nouveau cours' || label === 'Ajouter une position') put('create', button);
     else if (label === 'Commentaire' || label === 'Symbole') put('annotations', button);
     else if (label === 'PGN' || label === 'XPGN') put('save', button);
     else if (label === 'Ouvrir XPGN') put('position', button);
