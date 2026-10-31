@@ -74,6 +74,8 @@ Une position annotée est identifiée par `at.path`, suite ordonnée de coups UC
 - `["e2e4"]` : après 1.e4.
 - `["e2e4", "c7c5"]` : après 1.e4 c5, dans la variante sicilienne.
 
+Un coup nul (passe) est un nœud de la partie, sans déplacement de pièce, qui transfère le trait à l'autre camp. Dans le chemin UCI XPGN, il est codé `0000`. Le PGN intégré l'écrit `--` ; le lecteur doit le lire, afficher la même position avec le trait inversé et permettre la navigation vers les nœuds suivants. Plusieurs coups nuls successifs sont permis dans une séquence pédagogique. Ils ne sont pas des coups légaux d'une partie ordinaire : le lecteur les restitue comme éléments d'analyse, sans proposer une commande pour les créer.
+
 Les promotions utilisent le suffixe UCI `q`, `r`, `b` ou `n`. Le coup nul est représenté par `0000`. Un chemin identifie une branche précise et ne dépend ni du numéro de coup seul ni du FEN, qui peut se répéter.
 
 ## 5. Annotations
