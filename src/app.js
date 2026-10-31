@@ -3005,7 +3005,10 @@ function setupCourseAuthoring() {
     if (!currentXpgnCourse) return;
     const title = String(new FormData(chapterForm).get('title') || '').trim();
     if (!title) return;
-    const id = 'chapitre-' + (currentXpgnCourse.chapters.length + 1);
+    const usedChapterIds = new Set(currentXpgnCourse.chapters.map(chapter => chapter.id));
+    let chapterNumber = currentXpgnCourse.chapters.length + 1;
+    let id = 'chapitre-' + chapterNumber;
+    while (usedChapterIds.has(id)) id = 'chapitre-' + (++chapterNumber);
     currentXpgnCourse.chapters.push({
       id,
       title,
