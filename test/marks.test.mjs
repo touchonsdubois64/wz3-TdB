@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { COLORS, NUMBERS, SHAPES, borderLoops, createMarkSet, decodeMarks, encodeMarks, glyphSvg, insetLoop, renderSvg } from '../src/marks.js';
 
-test('11 couleurs, liseré blanc partout sauf pour le blanc', () => {
-  assert.deepEqual(COLORS.map((c) => c.id), ['noir','gris','blanc','rouge','orange','jaune','vert','cyan','bleu','violet','rose']);
+test('13 couleurs, liseré blanc partout sauf pour le blanc', () => {
+  assert.deepEqual(COLORS.map((c) => c.id), ['noir','gris','blanc','marron','rouge','orange','jaune','vert','vertclair','cyan','bleu','violet','rose']);
   for (const c of COLORS) assert.equal(c.outline, c.id === 'blanc' ? '#141414' : '#ffffff', c.id);
 });
 
