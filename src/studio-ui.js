@@ -98,8 +98,11 @@ const initStudioUi = () => {
   }
 
   // Analyse et annotations graphiques : on déplace les éléments existants, sans les recréer.
-  take('.right', 'analysis');
-  take('#marks-panel', 'annotations');
+  // Le panneau d'évaluation reste près de l'échiquier ; la palette graphique
+  // est placée au-dessus de celui-ci par placeBlocks() dans app.js.
+  const marksPanel = document.querySelector('#marks-panel');
+  const boardColumn = document.querySelector('.left');
+  if (marksPanel && boardColumn && marksPanel.parentElement !== boardColumn) boardColumn.prepend(marksPanel);
   const marksOpener = document.querySelector('.marks-opener.landscape-only') || document.querySelector('.marks-opener');
   put('annotations', marksOpener);
 
