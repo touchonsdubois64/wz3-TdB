@@ -2570,9 +2570,31 @@ function renderCourseChapter(index) {
         code.textContent = fen;
         details.append(summary, code);
         section.appendChild(details);
+
+        // Le lecteur peut replacer sur l'échiquier la position d'un bloc.
+        const navigate = document.createElement('button');
+        navigate.type = 'button';
+        navigate.className = 'xpgn-course-navigate';
+        navigate.textContent = 'Afficher sur l’échiquier';
+        if (block.position.path && !block.position.gameId && rootNode) {
+          const target = findPgnNodeByPath(rootNode, block.position.path);
+          if (target) {
+            navigate.addEventListener('click', () => {
+              courseReaderDialog.close();
+              showNode(target);
+            });
+            section.appendChild(navigate);
+          }
+        } else if (block.position.fen) {
+          navigate.addEventListener('click', () => {
+            courseReaderDialog.close();
+            enterGame(block.position.fen);
+          });
+          section.appendChild(navigate);
+        }
       } else {
         const note = document.createElement('p');
-        note.textContent = 'Cette position est référencée dans une partie intégrée (' + (block.position.gameId || 'partie principale') + '). La navigation vers cette position sera ajoutée dans une prochaine étape.';
+        note.textContent = 'Cette position est référencée dans une partie intégrée (' + (block.position.gameId || 'partie principale') + ') mais son chemin n’a pas pu être résolu.';
         section.appendChild(note);
       }
       if (block.caption) {
