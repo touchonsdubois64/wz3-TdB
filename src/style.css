@@ -384,7 +384,7 @@ body:not(.locked) #board piece { cursor: grab; }
 @media (pointer: coarse) { .var-btn { width: 22px; height: 24px; } }
 
 .thinking { font-style: italic; color: var(--ink-3); }
-.pgn-note { font-style: italic; color: var(--note); }
+.pgn-note { font-style: italic; color: var(--note); white-space: pre-wrap; }
 .game-comment { font-style: italic; color: var(--ink-3); white-space: nowrap; }
 
 .move-text.figurine-notation { display: inline; font-size: inherit; line-height: inherit; vertical-align: baseline; }
@@ -875,7 +875,8 @@ html[data-theme="dark"] .settings-swatch { border-color: #aaa; }
 .xpgn-course-head h2 { margin: 0; font-size: 1.15rem; }
 .xpgn-course-form label { display: grid; gap: 5px; font-size: .88rem; font-weight: 600; }
 .xpgn-course-form input:not([type="checkbox"]),
-.xpgn-course-form textarea {
+.xpgn-course-form textarea,
+.xpgn-course-form select {
     box-sizing: border-box;
     width: 100%;
     border: 1px solid var(--line);
