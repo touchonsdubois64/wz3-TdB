@@ -2017,6 +2017,12 @@ function createMoveButton(node, mainLine) {
     button.textContent = converted;
   }
   button.addEventListener('click', () => showNode(node));
+  button.addEventListener('contextmenu', event => {
+    event.preventDefault();
+    document.dispatchEvent(new CustomEvent('xpgn:move-context', {
+      detail: { node, x: event.clientX, y: event.clientY },
+    }));
+  });
   return button;
 }
 
@@ -2682,6 +2688,7 @@ function showCourseReader(chapterIndex = 0) {
   if (!courseReaderDialog.open) courseReaderDialog.showModal();
 }
 function setupMoveAnnotations() {
+  let annotationTargetNode = null;
   const add = (label, title, action) => {
     const button = document.createElement('button');
     button.type = 'button';
@@ -2711,8 +2718,8 @@ function setupMoveAnnotations() {
   commentDialog.querySelector('.xpgn-comment-cancel').addEventListener('click', closeComment);
   commentForm.addEventListener('submit', (event) => {
     event.preventDefault();
-    if (!currentNode) return;
-    currentNode.note = commentText.value.trim();
+    if (!annotationTargetNode) return;
+    annotationTargetNode.note = commentText.value.trim();
     updateMoves();
     closeComment();
   });
@@ -2722,7 +2729,8 @@ function setupMoveAnnotations() {
       showMessage('Sélectionnez une partie ou une position avant d’ajouter un commentaire.', 'info', pgnMessage);
       return;
     }
-    commentText.value = currentNode.note || '';
+    annotationTargetNode = currentNode;
+    commentText.value = annotationTargetNode.note || '';
     commentDialog.showModal();
     commentText.focus();
   });
@@ -2753,16 +2761,16 @@ function setupMoveAnnotations() {
   nagDialog.querySelector('.xpgn-nag-cancel').addEventListener('click', closeNag);
   nagForm.addEventListener('submit', (event) => {
     event.preventDefault();
-    if (!currentNode || !currentNode.parent) return;
+    if (!annotationTargetNode || !annotationTargetNode.parent) return;
     const nag = Number(nagSelect.value);
-    currentNode.nags = [...new Set([...(currentNode.nags || []), nag])];
+    annotationTargetNode.nags = [...new Set([...(annotationTargetNode.nags || []), nag])];
     updateMoves();
     closeNag();
   });
   nagDialog.querySelector('.xpgn-nag-remove').addEventListener('click', () => {
-    if (!currentNode || !currentNode.parent) return;
+    if (!annotationTargetNode || !annotationTargetNode.parent) return;
     const nag = Number(nagSelect.value);
-    currentNode.nags = (currentNode.nags || []).filter((value) => value !== nag);
+    annotationTargetNode.nags = (annotationTargetNode.nags || []).filter((value) => value !== nag);
     updateMoves();
     closeNag();
   });
@@ -2772,8 +2780,58 @@ function setupMoveAnnotations() {
       showMessage('Sélectionnez un coup dans la notation pour lui associer un symbole.', 'info', pgnMessage);
       return;
     }
-    nagSelect.value = String((currentNode.nags || [])[0] || 1);
+    annotationTargetNode = currentNode;
+    nagSelect.value = String((annotationTargetNode.nags || [])[0] || 1);
     nagDialog.showModal();
+  });
+
+  // Menu contextuel : commentaire avant/après le coup, ou symbole NAG.
+  const moveMenu = document.createElement('div');
+  moveMenu.className = 'xpgn-move-context';
+  moveMenu.hidden = true;
+  moveMenu.setAttribute('role', 'menu');
+  moveMenu.innerHTML = `
+    <button type="button" role="menuitem" data-action="before">Commenter avant ce coup</button>
+    <button type="button" role="menuitem" data-action="after">Commenter après ce coup</button>
+    <button type="button" role="menuitem" data-action="nag">Ajouter un symbole…</button>`;
+  document.body.appendChild(moveMenu);
+  let contextNode = null;
+  const hideMoveMenu = () => { moveMenu.hidden = true; contextNode = null; };
+  moveMenu.addEventListener('click', event => {
+    const action = event.target.closest('button')?.dataset.action;
+    if (!action || !contextNode) return;
+    const node = contextNode;
+    hideMoveMenu();
+    if (action === 'before' || action === 'after') {
+      annotationTargetNode = action === 'before' ? (node.parent || node) : node;
+      commentDialog.querySelector('h2').textContent = action === 'before'
+        ? 'Commentaire avant le coup'
+        : 'Commentaire après le coup';
+      commentText.value = annotationTargetNode.note || '';
+      commentDialog.showModal();
+      commentText.focus();
+    } else if (action === 'nag') {
+      if (!node.parent) return;
+      annotationTargetNode = node;
+      nagSelect.value = String((node.nags || [])[0] || 1);
+      nagDialog.showModal();
+    }
+  });
+  document.addEventListener('xpgn:move-context', event => {
+    const node = event.detail && event.detail.node;
+    if (!node) return;
+    contextNode = node;
+    moveMenu.hidden = false;
+    const width = moveMenu.offsetWidth || 240;
+    const height = moveMenu.offsetHeight || 130;
+    moveMenu.style.left = Math.max(8, Math.min(event.detail.x, window.innerWidth - width - 8)) + 'px';
+    moveMenu.style.top = Math.max(8, Math.min(event.detail.y, window.innerHeight - height - 8)) + 'px';
+  });
+  document.addEventListener('pointerdown', event => {
+    if (!moveMenu.hidden && !moveMenu.contains(event.target)) hideMoveMenu();
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') hideMoveMenu();
   });
 }
 
