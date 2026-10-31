@@ -16,7 +16,8 @@ import '@lichess-org/chessground/assets/chessground.base.css';
 import '@lichess-org/chessground/assets/chessground.brown.css';
 import { Chess } from 'chess.js';
 import { fillLabel, plainLabel, setupLibrary } from './library.js';
-import { parsePgn } from './pgn.js';
+import { findPgnNodeByPath, parsePgn } from './pgn.js';
+import { MOVE_NAGS, nagGlyph } from './nags.js';
 import { setupMarks } from './marks-ui.js';
 import { attachXpgnAnnotations, getXpgnNodePath, parseXpgn, stringifyXpgn } from './xpgn.js';
 import { setupSettings } from './settings.js';
@@ -2146,16 +2147,9 @@ function renderSequence(startNode, container, options = {}) {
     container.appendChild(createMoveButton(node, mainLine));
     const nags = (node.nags || []).filter(nag => Number.isInteger(nag) && nag >= 0 && nag <= 255);
     if (nags.length) {
-      const symbols = {
-        1:'!',2:'?',3:'!!',4:'??',5:'!?',6:'?!',7:'□',8:'□',9:'worst',
-        10:'=',11:'=',12:'↹',13:'∞',14:'+=',15:'=+',16:'±',17:'∓',
-        18:'+−',19:'−+',20:'+−+',21:'−++',22:'⨀',23:'⨀',
-        36:'→',37:'→',40:'↑',41:'↑',
-        42:'−',43:'−',44:'=',45:'=',46:'+',47:'+'
-      };
       const badge = document.createElement('span');
       badge.className = 'pgn-nags';
-      badge.textContent = nags.map(nag => symbols[nag] || ('NAG ' + nag)).join(' ');
+      badge.textContent = nags.map(nag => nagGlyph(nag) || ('NAG ' + nag)).join(' ');
       container.appendChild(badge);
     }
     if (node.note) {
@@ -2555,15 +2549,7 @@ function renderCourseChapter(index) {
         const sourcePgn = gameId ? (entry && entry.pgn) : currentXpgnMainPgn;
         if (sourcePgn) {
           const parsed = parsePgn(sourcePgn, Chess);
-          let node = parsed.root;
-          for (const uci of block.position.path || []) {
-            if (!node) break;
-            node = node.children.find(child => {
-            if (!child.move) return false;
-            if (uci === '0000') return Boolean(child.move.nullMove);
-            return !child.move.nullMove && child.move.from + child.move.to + (child.move.promotion || '') === uci;
-          }) || null;
-          }
+          const node = findPgnNodeByPath(parsed.root, block.position.path || []);
           if (node) fen = node.fen;
         } else if (block.position.path && block.position.path.length === 0) {
           fen = currentStartFen || new Chess().fen();
@@ -2638,23 +2624,6 @@ function showCourseReader() {
   renderCourseChapter(0);
   if (!courseReaderDialog.open) courseReaderDialog.showModal();
 }
-const MOVE_NAGS = [
-  {nag:1,label:'! Bon coup'},{nag:2,label:'? Mauvais coup'},{nag:3,label:'!! Très bon coup'},
-  {nag:4,label:'?? Très mauvais coup'},{nag:5,label:'!? Coup spéculatif'},{nag:6,label:'?! Coup douteux'},
-  {nag:7,label:'□ Coup forcé'},{nag:8,label:'Seul coup raisonnable'},{nag:9,label:'Pire coup'},
-  {nag:10,label:'= Position nulle / égale'},{nag:11,label:'Égalité, position calme'},{nag:12,label:'Égalité, position active'},
-  {nag:13,label:'∞ Position incertaine'},
-  {nag:14,label:'+= Léger avantage blanc'},{nag:15,label:'=+ Léger avantage noir'},
-  {nag:16,label:'± Avantage blanc'},{nag:17,label:'∓ Avantage noir'},
-  {nag:18,label:'+− Avantage décisif blanc'},{nag:19,label:'−+ Avantage décisif noir'},
-  {nag:20,label:'Avantage écrasant blanc'},{nag:21,label:'Avantage écrasant noir'},
-  {nag:22,label:'⨀ Blancs en zugzwang'},{nag:23,label:'⨀ Noirs en zugzwang'},
-  {nag:36,label:'→ Initiative blanche'},{nag:37,label:'→ Initiative noire'},
-  {nag:40,label:'↑ Attaque blanche'},{nag:41,label:'↑ Attaque noire'},
-  {nag:42,label:'Compensation blanche insuffisante'},{nag:43,label:'Compensation noire insuffisante'},
-  {nag:44,label:'Compensation blanche suffisante'},{nag:45,label:'Compensation noire suffisante'},
-  {nag:46,label:'Compensation blanche plus que suffisante'},{nag:47,label:'Compensation noire plus que suffisante'}
-];
 function setupMoveAnnotations() {
   const add = (label, title, action) => {
     const button = document.createElement('button');
