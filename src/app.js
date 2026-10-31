@@ -2879,6 +2879,156 @@ function setupCourseAuthoring() {
     showMessage('Position ajoutée au chapitre « ' + chapter.title + ' ». Vous pouvez en ajouter d’autres après avoir navigué dans la partie.', 'success', pgnMessage);
   });
   $('.notation-control').append(addPositionButton);
+
+  // Ajout de blocs pédagogiques sans quitter le cours : texte, exercice et chapitre.
+  const addBlockDialog = document.createElement('dialog');
+  addBlockDialog.className = 'xpgn-course-dialog';
+  addBlockDialog.innerHTML = `
+    <form class="xpgn-course-form">
+      <div class="xpgn-course-head"><h2>Ajouter au cours</h2><button type="button" class="xpgn-course-close" aria-label="Fermer">×</button></div>
+      <label>Type de contenu
+        <select name="kind">
+          <option value="text">Texte explicatif</option>
+          <option value="exercise">Exercice sur la position actuelle</option>
+        </select>
+      </label>
+      <label class="xpgn-add-text-field">Texte
+        <textarea name="text" rows="6" maxlength="20000" placeholder="Rédigez l’explication…"></textarea>
+      </label>
+      <label class="xpgn-add-exercise-field" hidden>Consigne de l’exercice
+        <textarea name="prompt" rows="3" maxlength="5000" placeholder="Que doit trouver le lecteur ?"></textarea>
+      </label>
+      <label class="xpgn-add-exercise-field" hidden>Réponse attendue
+        <select name="move"></select>
+      </label>
+      <label class="xpgn-add-exercise-field" hidden>Explication de la solution
+        <textarea name="explanation" rows="3" maxlength="5000" placeholder="Pourquoi ce coup est-il correct ?"></textarea>
+      </label>
+      <p class="xpgn-course-note xpgn-add-exercise-field" hidden>La réponse proposée est un coup disponible dans la position actuelle. Pour créer l’exercice, placez-vous d’abord sur cette position dans la partie.</p>
+      <div class="xpgn-course-actions"><button type="button" class="xpgn-add-cancel">Annuler</button><button type="submit">Ajouter au chapitre</button></div>
+    </form>`;
+  document.body.appendChild(addBlockDialog);
+  const addBlockForm = addBlockDialog.querySelector('form');
+  const kindSelect = addBlockForm.elements.namedItem('kind');
+  const textField = addBlockForm.querySelector('.xpgn-add-text-field');
+  const exerciseFields = [...addBlockForm.querySelectorAll('.xpgn-add-exercise-field')];
+  const moveSelect = addBlockForm.elements.namedItem('move');
+  const updateBlockKind = () => {
+    const exercise = kindSelect.value === 'exercise';
+    textField.hidden = exercise;
+    exerciseFields.forEach(field => { field.hidden = !exercise; });
+    if (exercise) {
+      moveSelect.innerHTML = '';
+      for (const [index, child] of (currentNode?.children || []).entries()) {
+        const option = document.createElement('option');
+        option.value = String(index);
+        option.textContent = child.move.san + (child.move.nullMove ? ' (coup nul)' : '');
+        moveSelect.appendChild(option);
+      }
+    }
+  };
+  kindSelect.addEventListener('change', updateBlockKind);
+  const closeBlockDialog = () => addBlockDialog.close();
+  addBlockDialog.querySelector('.xpgn-course-close').addEventListener('click', closeBlockDialog);
+  addBlockDialog.querySelector('.xpgn-add-cancel').addEventListener('click', closeBlockDialog);
+  addBlockForm.addEventListener('submit', event => {
+    event.preventDefault();
+    if (!currentXpgnCourse || !currentXpgnCourse.chapters.length) return;
+    const chapter = currentXpgnCourse.chapters[currentXpgnCourse.chapters.length - 1];
+    const data = new FormData(addBlockForm);
+    const used = new Set(chapter.blocks.map(block => block.id).filter(Boolean));
+    const prefix = kindSelect.value === 'exercise' ? 'exercice' : 'texte';
+    let number = chapter.blocks.length + 1;
+    let id = prefix + '-' + number;
+    while (used.has(id)) id = prefix + '-' + (++number);
+    if (kindSelect.value === 'text') {
+      const text = String(data.get('text') || '').trim();
+      if (!text) {
+        showMessage('Le texte du bloc ne peut pas être vide.', 'error', pgnMessage);
+        return;
+      }
+      chapter.blocks.push({ id, type: 'text', text });
+    } else {
+      const prompt = String(data.get('prompt') || '').trim();
+      const child = currentNode && currentNode.children[Number(data.get('move'))];
+      if (!locked || !currentNode || !prompt || !child) {
+        showMessage('Pour ajouter un exercice, sélectionnez une position avec au moins un coup de réponse.', 'error', pgnMessage);
+        return;
+      }
+      const move = child.move;
+      const uci = move.nullMove ? '0000' : move.from + move.to + (move.promotion || '');
+      chapter.blocks.push({
+        id,
+        type: 'exercise',
+        prompt,
+        position: { path: getXpgnNodePath(currentNode) },
+        expectedMoves: [uci],
+        ...(String(data.get('explanation') || '').trim() ? { explanation: String(data.get('explanation')).trim() } : {}),
+      });
+    }
+    closeBlockDialog();
+    showCourseReader(currentXpgnCourse.chapters.length - 1);
+    showMessage('Contenu ajouté au chapitre « ' + chapter.title + ' ». Pensez à enregistrer le fichier XPGN.', 'success', pgnMessage);
+  });
+
+  const addBlockButton = document.createElement('button');
+  addBlockButton.type = 'button';
+  addBlockButton.className = 'export-pgn-button xpgn-action-button';
+  addBlockButton.textContent = 'Ajouter texte / exercice';
+  addBlockButton.title = 'Ajouter un bloc de texte ou un exercice au chapitre courant';
+  addBlockButton.addEventListener('click', () => {
+    if (!currentXpgnCourse) {
+      showMessage('Créez ou ouvrez d’abord un cours XPGN.', 'info', pgnMessage);
+      return;
+    }
+    kindSelect.value = 'text';
+    updateBlockKind();
+    addBlockDialog.showModal();
+  });
+  $('.notation-control').append(addBlockButton);
+
+  const chapterDialog = document.createElement('dialog');
+  chapterDialog.className = 'xpgn-course-dialog';
+  chapterDialog.innerHTML = `
+    <form class="xpgn-course-form">
+      <div class="xpgn-course-head"><h2>Nouveau chapitre</h2><button type="button" class="xpgn-course-close" aria-label="Fermer">×</button></div>
+      <label>Titre du chapitre<input name="title" required maxlength="300" placeholder="Titre du chapitre"></label>
+      <div class="xpgn-course-actions"><button type="button" class="xpgn-chapter-cancel">Annuler</button><button type="submit">Créer le chapitre</button></div>
+    </form>`;
+  document.body.appendChild(chapterDialog);
+  const chapterForm = chapterDialog.querySelector('form');
+  const closeChapterDialog = () => chapterDialog.close();
+  chapterDialog.querySelector('.xpgn-course-close').addEventListener('click', closeChapterDialog);
+  chapterDialog.querySelector('.xpgn-chapter-cancel').addEventListener('click', closeChapterDialog);
+  chapterForm.addEventListener('submit', event => {
+    event.preventDefault();
+    if (!currentXpgnCourse) return;
+    const title = String(new FormData(chapterForm).get('title') || '').trim();
+    if (!title) return;
+    const id = 'chapitre-' + (currentXpgnCourse.chapters.length + 1);
+    currentXpgnCourse.chapters.push({
+      id,
+      title,
+      blocks: [{ id: id + '-introduction', type: 'heading', text: title, level: 2 }],
+    });
+    closeChapterDialog();
+    showCourseReader(currentXpgnCourse.chapters.length - 1);
+    showMessage('Chapitre « ' + title + ' » créé. Vous pouvez maintenant y ajouter du texte, des positions et des exercices.', 'success', pgnMessage);
+  });
+  const addChapterButton = document.createElement('button');
+  addChapterButton.type = 'button';
+  addChapterButton.className = 'export-pgn-button xpgn-action-button';
+  addChapterButton.textContent = 'Nouveau chapitre';
+  addChapterButton.title = 'Ajouter un chapitre au cours XPGN';
+  addChapterButton.addEventListener('click', () => {
+    if (!currentXpgnCourse) {
+      showMessage('Créez ou ouvrez d’abord un cours XPGN.', 'info', pgnMessage);
+      return;
+    }
+    chapterForm.reset();
+    chapterDialog.showModal();
+  });
+  $('.notation-control').append(addChapterButton);
 }
 
 // ==================================================
