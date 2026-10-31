@@ -2846,6 +2846,14 @@ function setupCourseAuthoring() {
   });
   $('.notation-control').append(button);
 
+  const getActiveCourseChapterIndex = () => {
+    if (!currentXpgnCourse || !currentXpgnCourse.chapters.length) return -1;
+    const selected = courseReaderDialog ? Number(courseReaderDialog.dataset.chapter) : NaN;
+    return Number.isInteger(selected) && selected >= 0 && selected < currentXpgnCourse.chapters.length
+      ? selected
+      : currentXpgnCourse.chapters.length - 1;
+  };
+
   const addPositionButton = document.createElement('button');
   addPositionButton.type = 'button';
   addPositionButton.className = 'export-pgn-button xpgn-action-button';
@@ -2860,7 +2868,8 @@ function setupCourseAuthoring() {
       showMessage('Affichez d’abord une position de partie sur l’échiquier.', 'info', pgnMessage);
       return;
     }
-    const chapter = currentXpgnCourse.chapters[currentXpgnCourse.chapters.length - 1];
+    const chapterIndex = getActiveCourseChapterIndex();
+    const chapter = currentXpgnCourse.chapters[chapterIndex];
     const usedIds = new Set(chapter.blocks.map(block => block.id).filter(Boolean));
     let suffix = chapter.blocks.length + 1;
     let id = 'position-' + suffix;
@@ -2871,7 +2880,7 @@ function setupCourseAuthoring() {
       position: { path: getXpgnNodePath(currentNode) },
       caption: 'Position ' + (chapter.blocks.filter(block => block.type === 'diagram' || block.type === 'exercise').length + 1),
     });
-    showCourseReader(currentXpgnCourse.chapters.length - 1);
+    showCourseReader(chapterIndex);
     showMessage('Position ajoutée au chapitre « ' + chapter.title + ' ». Vous pouvez en ajouter d’autres après avoir navigué dans la partie.', 'success', pgnMessage);
   });
   $('.notation-control').append(addPositionButton);
@@ -2930,7 +2939,8 @@ function setupCourseAuthoring() {
   addBlockForm.addEventListener('submit', event => {
     event.preventDefault();
     if (!currentXpgnCourse || !currentXpgnCourse.chapters.length) return;
-    const chapter = currentXpgnCourse.chapters[currentXpgnCourse.chapters.length - 1];
+    const chapterIndex = getActiveCourseChapterIndex();
+    const chapter = currentXpgnCourse.chapters[chapterIndex];
     const data = new FormData(addBlockForm);
     const used = new Set(chapter.blocks.map(block => block.id).filter(Boolean));
     const prefix = kindSelect.value === 'exercise' ? 'exercice' : 'texte';
@@ -2963,7 +2973,7 @@ function setupCourseAuthoring() {
       });
     }
     closeBlockDialog();
-    showCourseReader(currentXpgnCourse.chapters.length - 1);
+    showCourseReader(chapterIndex);
     showMessage('Contenu ajouté au chapitre « ' + chapter.title + ' ». Pensez à enregistrer le fichier XPGN.', 'success', pgnMessage);
   });
 
