@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { MOVE_NAGS, nagGlyph } from '../src/nags.js';
+import { MOVE_NAGS, nagDisplay, nagGlyph } from '../src/nags.js';
 
 test('catalogue NAG : coup forcé, seul coup, zugzwang et compensation', () => {
   const labels = new Map(MOVE_NAGS.map(({nag,label}) => [nag,label]));
@@ -13,6 +13,8 @@ test('catalogue NAG : coup forcé, seul coup, zugzwang et compensation', () => {
   assert.equal(nagGlyph(22), '⨀');
   assert.equal(nagGlyph(23), '⨀');
   assert.equal(nagGlyph(44), '⯹');
+  assert.match(nagDisplay(20), /Avantage écrasant blanc/i);
+  assert.match(nagDisplay(46), /Compensation blanche plus que suffisante/i);
   assert.equal(nagGlyph(255), null);
 });
 
