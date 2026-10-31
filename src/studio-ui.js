@@ -13,7 +13,7 @@ const initStudioUi = () => {
   const app = document.querySelector('.app');
   const frameLeft = document.querySelector('#frame-left');
   const controls = document.querySelector('.controls');
-  if (!app || !frameLeft || !frameRight || !controls) return;
+  if (!app || !frameLeft || !controls) return;
 
   const icons = {
     info: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 10v7m0-10h.01"/></svg>',
@@ -84,7 +84,8 @@ const initStudioUi = () => {
   drawer.after(positionTools);
 
   const put = (category, element) => {
-    if (element) panels.get(category).content.appendChild(element);
+    const target = panels.get(category);
+    if (element && target) target.content.appendChild(element);
   };
   const take = (selector, category) => put(category, document.querySelector(selector));
 
@@ -104,7 +105,7 @@ const initStudioUi = () => {
   for (const button of actionButtons) {
     const label = (button.textContent || '').trim();
     if (['Nouveau cours', 'Ajouter une position', 'Ajouter texte / exercice', 'Nouveau chapitre'].includes(label)) put('create', button);
-    else if (label === 'Commentaire' || label === 'Symbole') put('annotations', button);
+    else if (label === 'Commentaire' || label === 'Symbole') put('create', button);
     else if (label === 'PGN' || label === 'XPGN') put('records', button);
     else if (label === 'Ouvrir XPGN') put('position', button);
   }
@@ -179,7 +180,7 @@ const initStudioUi = () => {
   closeAfter(fileInput, 'change');
 
   // Une sauvegarde validée referme également son panneau.
-  for (const button of panels.get('save').content.querySelectorAll('button')) {
+  for (const button of panels.get('records').content.querySelectorAll('button')) {
     button.addEventListener('click', () => window.setTimeout(closeDrawer, 180));
   }
 };
