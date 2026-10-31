@@ -81,8 +81,10 @@ const initStudioUi = () => {
   });
   panels.get('analysis').content.appendChild(evalToggle);
 
-  app.prepend(toolbar);
-  app.appendChild(drawer);
+  // Barre horizontale dans le cadre principal, près du titre et des commandes.
+  const workspace = frameLeft.querySelector('.workspace');
+  frameLeft.insertBefore(toolbar, workspace);
+  frameLeft.insertBefore(drawer, workspace);
 
   // Les outils de position se déploient dans le haut du cadre droit, au-dessus de la notation.
   const positionTools = document.createElement('section');
