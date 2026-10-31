@@ -2629,7 +2629,7 @@ function setupCourseReader() {
   courseReaderDialog.querySelector('.xpgn-course-next').addEventListener('click', () => renderCourseChapter(Math.min(currentXpgnCourse.chapters.length - 1, Number(courseReaderDialog.dataset.chapter || 0) + 1)));
   courseReaderDialog.querySelectorAll('.xpgn-course-close').forEach(button => button.addEventListener('click', () => courseReaderDialog.close()));
 }
-function showCourseReader() {
+function showCourseReader(chapterIndex = 0) {
   if (!currentXpgnCourse || !courseReaderDialog) return;
   const course = currentXpgnCourse;
   courseReaderDialog.querySelector('.xpgn-course-reader-title').textContent = course.title;
@@ -2642,7 +2642,7 @@ function showCourseReader() {
     option.textContent = chapter.title;
     select.appendChild(option);
   });
-  renderCourseChapter(0);
+  renderCourseChapter(Math.max(0, Math.min(course.chapters.length - 1, chapterIndex)));
   if (!courseReaderDialog.open) courseReaderDialog.showModal();
 }
 function setupMoveAnnotations() {
@@ -2858,7 +2858,7 @@ function setupCourseAuthoring() {
       position: { fen: game.fen() },
       caption: 'Position ' + (chapter.blocks.filter(block => block.type === 'diagram' || block.type === 'exercise').length + 1),
     });
-    showCourseReader();
+    showCourseReader(currentXpgnCourse.chapters.length - 1);
     showMessage('Position ajoutée au chapitre « ' + chapter.title + ' ». Vous pouvez en ajouter d’autres après avoir navigué dans la partie.', 'success', pgnMessage);
   });
   $('.notation-control').append(addPositionButton);
