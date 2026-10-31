@@ -561,7 +561,13 @@ body.marking #board, body.marking #board piece { cursor: crosshair; }
 }
 .marks-panel[hidden] { display: none; }
 .marks-row { display: flex; flex-wrap: wrap; gap: 4px; }
-.marks-colors { gap: 6px; }
+.marks-colors { gap: 6px; align-items: center; }
+.marks-collapse { margin-left: auto; width: 26px; height: 24px; padding: 0; border: 1px solid var(--edge); border-radius: 4px; background: var(--panel); color: var(--ink); font: bold 20px/1 Arial, sans-serif; cursor: pointer; }
+.marks-collapse:hover { background: var(--hover); }
+.marks-panel.collapsed > .marks-tabs,
+.marks-panel.collapsed > .marks-content,
+.marks-panel.collapsed > .marks-footer { display: none !important; }
+.marks-panel.collapsed { padding-bottom: 6px; }
 .marks-color {
     width: calc(var(--mk) * .72); height: calc(var(--mk) * .72); padding: 0; border-radius: 50%;
     border: 2px solid #fff; background: var(--c); box-shadow: 0 0 0 1px var(--ink-4); cursor: pointer;
@@ -844,11 +850,12 @@ html[data-theme="dark"] .settings-swatch { border-color: #aaa; }
 
 .tool-btn .bulb { width: auto; height: 74%; object-fit: contain; display: block; pointer-events: none; }
 
-.marks-footer { justify-content: flex-end; }
-.marks-save { display: inline-flex; align-items: center; gap: 5px; }
-.marks-save svg { width: 15px; height: 15px; display: block; }
-.marks-save:disabled { opacity: .45; cursor: default; }
-.marks-save:disabled:hover { background: var(--panel); }
+.marks-footer { justify-content: flex-start; }
+.marks-footer-left { display: flex; align-items: center; gap: 4px; }
+
+
+
+
 .marks-tab.pict { display: inline-flex; align-items: center; justify-content: center; padding: 2px 5px; min-width: 38px; height: 28px; }
 .marks-tab.pict.selected { padding: 1px 4px; }
 .marks-tab.pict svg { height: 20px; width: auto; display: block; pointer-events: none; }
