@@ -280,7 +280,7 @@ let xpgnDirty = false;
 const marks = setupMarks({
   layer: $('#marks-layer'),
   panel: $('#marks-panel'),
-  buttons: [...document.querySelectorAll('.marks-opener')],
+  buttons: [],
   isWhite: () => ground.state.orientation === 'white',
   onItemsChange: (items) => {
     if (!currentNode) return;
