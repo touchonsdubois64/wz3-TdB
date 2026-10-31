@@ -124,7 +124,10 @@ const initStudioUi = () => {
   const boardColumn = document.querySelector('.left');
   if (marksPanel && boardColumn && marksPanel.parentElement !== boardColumn) boardColumn.prepend(marksPanel);
   const marksOpener = document.querySelector('.marks-opener.landscape-only') || document.querySelector('.marks-opener');
-  put('annotations', marksOpener);
+  if (marksOpener && boardColumn) {
+    marksOpener.classList.add('studio-board-marks-toggle');
+    boardColumn.insertBefore(marksOpener, marksPanel || boardColumn.firstChild);
+  }
 
   // Les actions ont quitté leur ancienne ligne de notation.
   const notation = document.querySelector('.notation-control');
