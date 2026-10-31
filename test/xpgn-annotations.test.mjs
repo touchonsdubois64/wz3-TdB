@@ -38,7 +38,7 @@ test('les annotations propres à une branche sont conservées pendant la propaga
   first.children.push(main, variation);
   updateXpgnAnnotationBranch(first, [red, blue]);
   assert.deepEqual(main.xpgnAnnotations, [red, blue]);
-  assert.deepEqual(variation.xpgnAnnotations, [green, red, blue]);
+  assert.deepEqual(variation.xpgnAnnotations, [red, green, blue]);
 });
 
 test('un nouveau coup hérite des annotations actives', () => {
