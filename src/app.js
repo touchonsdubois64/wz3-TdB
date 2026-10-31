@@ -852,16 +852,18 @@ function legalityError(placement, turn) {
  * ou disque noir dans celui de la rangée 8.
  */
 function updateTurnDisc() {
-  const disc = $('#turn-disc');
-  if (!disc) return;
-  if (!locked) {
-    disc.className = 'turn-disc';
-    return;
-  }
-  const white = game.turn() === 'w';
+  const whiteButton = $('#turn-white');
+  const blackButton = $('#turn-black');
+  if (!whiteButton || !blackButton) return;
+  const turn = locked ? game.turn() : editMeta.turn;
   const flipped = ground.state.orientation === 'black';
-  const atTop = white ? flipped : !flipped;
-  disc.className = 'turn-disc ' + (white ? 'white' : 'black') + (atTop ? ' at-top' : ' at-bottom');
+  for (const [color, button] of [['w', whiteButton], ['b', blackButton]]) {
+    const white = color === 'w';
+    const atTop = white ? flipped : !flipped;
+    button.className = 'turn-disc ' + (white ? 'white' : 'black') + (atTop ? ' at-top' : ' at-bottom') + (turn === color ? ' active' : '');
+    button.setAttribute('aria-pressed', turn === color ? 'true' : 'false');
+    button.title = 'Trait aux ' + (white ? 'Blancs' : 'Noirs') + (turn === color ? ' (actuel)' : ' : passer le trait à ce camp');
+  }
 }
 
 function updateStartButtons() {
@@ -3250,6 +3252,15 @@ document.querySelectorAll('.mode-btn').forEach((button) => {
 
 startButtons.w.addEventListener('click', () => onStartClick('w'));
 startButtons.b.addEventListener('click', () => onStartClick('b'));
+
+$('#turn-white').addEventListener('click', () => {
+  if (locked) changeTrait('w');
+  else { editMeta.turn = 'w'; updateStartButtons(); }
+});
+$('#turn-black').addEventListener('click', () => {
+  if (locked) changeTrait('b');
+  else { editMeta.turn = 'b'; updateStartButtons(); }
+});
 
 document.querySelectorAll('.shift-btn').forEach((button) => {
   button.addEventListener('click', () => shiftPosition(button.dataset.dir));
