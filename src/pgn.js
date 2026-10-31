@@ -33,7 +33,7 @@ function splitGame(text) {
     .split('\n')
     .filter((line) => !line.trim().startsWith('%'))
     .map((line) => line.replace(/;.*$/, '')) // commentaire de fin de ligne
-    .join(' ');
+    .join('\n');
   return { headers, movetext };
 }
 
