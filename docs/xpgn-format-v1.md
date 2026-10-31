@@ -20,6 +20,8 @@ Un document XPGN peut contenir :
 
 Les anciennes structures avec `game` et `annotations` restent valides. Un cours autonome peut omettre `game` et utiliser des diagrammes fondés sur un FEN.
 
+Un chapitre peut contenir plusieurs blocs `diagram` et `exercise` successifs. Studio permet d'ajouter plusieurs positions au même chapitre, dans leur ordre pédagogique.
+
 Exemple de document de cours autonome :
 
 ```json
