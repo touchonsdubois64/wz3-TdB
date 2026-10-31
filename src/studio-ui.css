@@ -375,7 +375,7 @@
 }
 
 @media (orientation: landscape) and (min-width: 1260px) and (min-height: 520px) {
-  .workspace { --board: min(280px, calc(100cqw - 320px), calc(100dvh - 245px)); }
+  .workspace { --board: min(250px, calc(100cqw - 320px), calc(100dvh - 245px)); }
   .left > .studio-board-marks-toggle {
     display: inline-flex !important;
     align-self: flex-start;
