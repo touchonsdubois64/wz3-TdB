@@ -64,7 +64,10 @@ function parseComment(inner) {
       directives.push(directive.trim());
       return ' ';
     })
-    .replace(/\s+/g, ' ')
+    .replace(/\r\n?/g, '\n')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n[ \t]+/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
     .trim();
   return { note, shapes, directives };
 }
