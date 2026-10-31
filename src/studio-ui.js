@@ -69,6 +69,18 @@ const initStudioUi = () => {
     panels.set(id, { panel, content });
   }
 
+  const evalToggle = document.createElement('button');
+  evalToggle.type = 'button';
+  evalToggle.className = 'export-pgn-button';
+  evalToggle.textContent = 'Masquer l’évaluation';
+  evalToggle.addEventListener('click', () => {
+    const evaluation = document.querySelector('.workspace > .right');
+    if (!evaluation) return;
+    evaluation.hidden = !evaluation.hidden;
+    evalToggle.textContent = evaluation.hidden ? 'Afficher l’évaluation' : 'Masquer l’évaluation';
+  });
+  panels.get('analysis').content.appendChild(evalToggle);
+
   app.prepend(toolbar);
   app.appendChild(drawer);
 
