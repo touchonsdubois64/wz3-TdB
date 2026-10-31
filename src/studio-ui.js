@@ -12,11 +12,12 @@ const initStudioUi = () => {
 
   const app = document.querySelector('.app');
   const frameLeft = document.querySelector('#frame-left');
-  const frameRight = document.querySelector('#frame-right');
   const controls = document.querySelector('.controls');
   if (!app || !frameLeft || !frameRight || !controls) return;
 
   const icons = {
+    info: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 10v7m0-10h.01"/></svg>',
+    records: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3h14l3 3v15H3V4a1 1 0 0 1 1-1Z"/><path d="M7 3v6h10V3M7 21v-8h10v8"/></svg>',
     settings: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6Z"/><path d="m19.4 13.5 1.1.9-1.6 2.8-1.4-.5a7.8 7.8 0 0 1-1.6.9l-.2 1.5h-3.3l-.2-1.5a7.8 7.8 0 0 1-1.6-.9l-1.4.5-1.6-2.8 1.1-.9a7 7 0 0 1 0-1.9l-1.1-.9 1.6-2.8 1.4.5a7.8 7.8 0 0 1 1.6-.9l.2-1.5h3.3l.2 1.5a7.8 7.8 0 0 1 1.6.9l1.4-.5 1.6 2.8-1.1.9a7 7 0 0 1 0 1.9Z"/></svg>',
     create: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.5h9l5 5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z"/><path d="M14 3.5V9h5M12 12v6m-3-3h6"/></svg>',
     position: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h18v18H3zM3 12h18M12 3v18"/><path d="M7 7h2v2H7zM15 15h2v2h-2z" fill="currentColor"/><path d="M17.5 5.5v5m-2.5-2.5h5"/></svg>',
@@ -25,12 +26,11 @@ const initStudioUi = () => {
     save: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3h14l3 3v15H3V4a1 1 0 0 1 1-1Z"/><path d="M7 3v6h10V3M7 21v-8h10v8"/></svg>'
   };
   const categories = [
+    ['info', 'Infos'],
     ['settings', 'Réglages'],
+    ['records', 'Enregistrements'],
     ['create', 'Création'],
-    ['position', 'Position'],
-    ['analysis', 'Analyse'],
-    ['annotations', 'Annotations'],
-    ['save', 'Sauvegarde']
+    ['position', 'Position']
   ];
 
   const toolbar = document.createElement('nav');
@@ -69,29 +69,19 @@ const initStudioUi = () => {
     panels.set(id, { panel, content });
   }
 
-  const evalToggle = document.createElement('button');
-  evalToggle.type = 'button';
-  evalToggle.className = 'export-pgn-button';
-  evalToggle.textContent = 'Masquer l’évaluation';
-  evalToggle.addEventListener('click', () => {
-    const evaluation = document.querySelector('.workspace > .right');
-    if (!evaluation) return;
-    evaluation.hidden = !evaluation.hidden;
-    evalToggle.textContent = evaluation.hidden ? 'Afficher l’évaluation' : 'Masquer l’évaluation';
-  });
-  panels.get('analysis').content.appendChild(evalToggle);
-
-  // Barre horizontale dans le cadre principal, près du titre et des commandes.
+  // La barre compacte et ses panneaux prennent place dans la colonne à gauche de l'échiquier.
   const workspace = frameLeft.querySelector('.workspace');
-  frameLeft.insertBefore(toolbar, workspace);
-  frameLeft.insertBefore(drawer, workspace);
+  const evaluationColumn = workspace && workspace.querySelector(':scope > .right');
+  if (!workspace || !evaluationColumn) return;
+  evaluationColumn.prepend(toolbar);
+  toolbar.after(drawer);
 
-  // Les outils de position se déploient dans le haut du cadre droit, au-dessus de la notation.
+  // Les outils de position se déploient sous la barre, à gauche de l'échiquier.
   const positionTools = document.createElement('section');
   positionTools.className = 'studio-position-tools';
   positionTools.hidden = true;
   positionTools.setAttribute('aria-label', 'Chargement et préparation de position');
-  frameRight.prepend(positionTools);
+  drawer.after(positionTools);
 
   const put = (category, element) => {
     if (element) panels.get(category).content.appendChild(element);
@@ -103,13 +93,19 @@ const initStudioUi = () => {
   take('.notation-native-select', 'settings');
   take('.notation-menu', 'settings');
 
+  // Infos : rappel du fonctionnement de l'interface.
+  const infoText = document.createElement('p');
+  infoText.className = 'studio-info-text';
+  infoText.textContent = 'XPGN Studio permet de créer, charger, annoter et enregistrer des positions et des parties d’échecs. Utilisez Position pour importer un PGN, un XPGN ou une FEN, ou pour placer les pièces manuellement. Les outils d’annotation graphique se trouvent au-dessus de l’échiquier. L’analyse Stockfish et les zones d’évaluation restent accessibles dans cette colonne.';
+  panels.get('info').content.appendChild(infoText);
+
   // Création : le formulaire de cours déjà présent dans Studio.
   const actionButtons = [...document.querySelectorAll('.notation-control button')];
   for (const button of actionButtons) {
     const label = (button.textContent || '').trim();
     if (['Nouveau cours', 'Ajouter une position', 'Ajouter texte / exercice', 'Nouveau chapitre'].includes(label)) put('create', button);
     else if (label === 'Commentaire' || label === 'Symbole') put('annotations', button);
-    else if (label === 'PGN' || label === 'XPGN') put('save', button);
+    else if (label === 'PGN' || label === 'XPGN') put('records', button);
     else if (label === 'Ouvrir XPGN') put('position', button);
   }
 
@@ -125,11 +121,7 @@ const initStudioUi = () => {
   const marksPanel = document.querySelector('#marks-panel');
   const boardColumn = document.querySelector('.left');
   if (marksPanel && boardColumn && marksPanel.parentElement !== boardColumn) boardColumn.prepend(marksPanel);
-  const marksOpener = document.querySelector('.marks-opener.landscape-only') || document.querySelector('.marks-opener');
-  if (marksOpener && boardColumn) {
-    marksOpener.classList.add('studio-board-marks-toggle');
-    boardColumn.insertBefore(marksOpener, marksPanel || boardColumn.firstChild);
-  }
+  // La palette reste affichée au-dessus de l'échiquier : aucun bouton crayon séparé.
 
   // Les actions ont quitté leur ancienne ligne de notation.
   const notation = document.querySelector('.notation-control');
@@ -137,9 +129,6 @@ const initStudioUi = () => {
   controls.hidden = true;
 
   function closeDrawer() {
-    if (activeCategory === 'annotations' && marksOpener && marksOpener.classList.contains('active')) {
-      marksOpener.click();
-    }
     activeCategory = null;
     drawer.hidden = true;
     positionTools.hidden = true;
@@ -165,16 +154,13 @@ const initStudioUi = () => {
       button.setAttribute('aria-expanded', selected ? 'true' : 'false');
       panels.get(key).panel.hidden = !selected;
     }
-    if (id === 'annotations' && marksOpener && !marksOpener.classList.contains('active')) {
-      marksOpener.click();
-    }
   }
 
   for (const [id, button] of buttons) button.addEventListener('click', () => openCategory(id));
 
   document.addEventListener('pointerdown', (event) => {
     if ((drawer.hidden && positionTools.hidden) || toolbar.contains(event.target) ||
-        drawer.contains(event.target) || positionTools.contains(event.target)) return;
+        drawer.contains(event.target) || positionTools.contains(event.target) || evaluationColumn.contains(event.target)) return;
     closeDrawer();
   });
   document.addEventListener('keydown', (event) => {
