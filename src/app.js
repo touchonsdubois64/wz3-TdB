@@ -2522,7 +2522,7 @@ function setupXpgnControls() {
     $('.notation-control').append(button);
   };
   makeButton('Ouvrir XPGN', 'Ouvrir un document .xpgn', () => input.click());
-  makeButton('XPGN', 'Télécharger la partie, ses annotations et le cours au format .xpgn', downloadXpgn);
+  makeButton('XPGN', 'Enregistrer le document .xpgn dans le dossier de votre choix (si le navigateur le permet)', downloadXpgn);
   setupCourseAuthoring();
   setupCourseReader();
   setupMoveAnnotations();
