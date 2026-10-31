@@ -7,6 +7,12 @@
     --board: min(720px, calc(100cqw - 105px), calc(100dvh - 155px));
   }
   .app {
+    width: 100%;
+    max-width: none;
+    min-height: 100dvh;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
     grid-template-columns: minmax(0, 55fr) minmax(0, 45fr);
   }
   .frame-left {
