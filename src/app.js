@@ -2727,6 +2727,7 @@ function setupMoveAnnotations() {
   });
 
   add('Commentaire', 'Rédiger un commentaire multilignes sur la position sélectionnée', () => {
+    commentDialog.querySelector('h2').textContent = 'Commentaire de la position';
     if (!currentNode) {
       showMessage('Sélectionnez une partie ou une position avant d’ajouter un commentaire.', 'info', pgnMessage);
       return;
@@ -2752,11 +2753,23 @@ function setupMoveAnnotations() {
   document.body.appendChild(nagDialog);
   const nagForm = nagDialog.querySelector('form');
   const nagSelect = nagForm.elements.namedItem('nag');
-  for (const item of MOVE_NAGS) {
-    const option = document.createElement('option');
-    option.value = String(item.nag);
-    option.textContent = '$' + item.nag + ' — ' + item.label;
-    nagSelect.appendChild(option);
+  const nagGroups = [
+    { label: 'Critiques de coups', min: 1, max: 9 },
+    { label: 'Évaluations de position', min: 10, max: 23 },
+    { label: 'Espace et développement', min: 24, max: 35 },
+    { label: 'Initiative et attaque', min: 36, max: 41 },
+    { label: 'Compensation matérielle', min: 42, max: 47 },
+  ];
+  for (const group of nagGroups) {
+    const optgroup = document.createElement('optgroup');
+    optgroup.label = group.label;
+    for (const item of MOVE_NAGS.filter((entry) => entry.nag >= group.min && entry.nag <= group.max)) {
+      const option = document.createElement('option');
+      option.value = String(item.nag);
+      option.textContent = '$' + item.nag + ' — ' + item.label;
+      optgroup.appendChild(option);
+    }
+    if (optgroup.children.length) nagSelect.appendChild(optgroup);
   }
   const closeNag = () => nagDialog.close();
   nagDialog.querySelector('.xpgn-course-close').addEventListener('click', closeNag);
