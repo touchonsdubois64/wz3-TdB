@@ -20,6 +20,7 @@ import { findPgnNodeByPath, parsePgn } from './pgn.js';
 import { MOVE_NAGS, nagDisplay } from './nags.js';
 import { setupMarks } from './marks-ui.js';
 import { attachXpgnAnnotations, getXpgnNodePath, parseXpgn, stringifyXpgn } from './xpgn.js';
+import { inheritXpgnAnnotations, updateXpgnAnnotationBranch } from './xpgn-annotations.js';
 import { setupSettings } from './settings.js';
 
 import './style.css';
@@ -281,7 +282,7 @@ const marks = setupMarks({
   isWhite: () => ground.state.orientation === 'white',
   onItemsChange: (items) => {
     if (!currentNode) return;
-    currentNode.xpgnAnnotations = items;
+    updateXpgnAnnotationBranch(currentNode, items);
     xpgnDirty = true;
   },
   // position à laquelle se rapportent les annotations téléchargées (bouton « Enregistrer »)
@@ -907,6 +908,7 @@ function changeTrait(turn) {
   let child = findChild(currentNode, nullMove);
   if (!child) {
     child = { parent: currentNode, move: nullMove, source: 'trait', children: [], fen: game.fen(), selectedChild: null, comment: null };
+    inheritXpgnAnnotations(currentNode, child);
     currentNode.children.push(child);
   }
   currentNode.selectedChild = child;
@@ -1069,6 +1071,7 @@ function createNode(parent, move, source) {
     fen: game.fen(),
     selectedChild: null,
     comment: null,
+    xpgnAnnotations: (parent.xpgnAnnotations || []).map((item) => ({ ...item })),
   };
 }
 
