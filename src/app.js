@@ -2571,17 +2571,34 @@ function renderCourseChapter(index) {
         details.append(summary, code);
         section.appendChild(details);
 
-        // Le lecteur peut replacer sur l'échiquier la position d'un bloc.
+        // Le lecteur peut replacer la position sur l'échiquier, y compris
+        // lorsqu'elle appartient à une partie de la bibliothèque (gameId).
         const navigate = document.createElement('button');
         navigate.type = 'button';
         navigate.className = 'xpgn-course-navigate';
         navigate.textContent = 'Afficher sur l’échiquier';
-        if (block.position.path && !block.position.gameId && rootNode) {
-          const target = findPgnNodeByPath(rootNode, block.position.path);
+        if (block.position.path) {
+          const gameId = block.position.gameId;
+          const gameEntry = gameId ? currentXpgnGames.find(item => item.id === gameId) : null;
+          const sourcePgn = gameId ? (gameEntry && gameEntry.pgn) : currentXpgnMainPgn;
+          let target = null;
+          if (!gameId && rootNode) {
+            target = findPgnNodeByPath(rootNode, block.position.path);
+          } else if (sourcePgn) {
+            const parsed = parsePgn(sourcePgn, Chess);
+            if (!parsed.error) target = findPgnNodeByPath(parsed.root, block.position.path);
+          }
           if (target) {
             navigate.addEventListener('click', () => {
               courseReaderDialog.close();
-              showNode(target);
+              if (gameId && sourcePgn) {
+                if (!loadPgn(sourcePgn, { strict: true, preserveCourse: true })) {
+                  showMessage('Impossible d’ouvrir la partie référencée par ce diagramme.', 'error', pgnMessage);
+                  return;
+                }
+                target = findPgnNodeByPath(rootNode, block.position.path);
+              }
+              if (target) showNode(target);
             });
             section.appendChild(navigate);
           }
@@ -2799,7 +2816,7 @@ function setupCourseAuthoring() {
       blocks.push({
         id: 'diagramme-1',
         type: 'diagram',
-        position: { fen: game.fen() },
+        position: { path: getXpgnNodePath(currentNode) },
         caption: 'Position de travail',
       });
     }
@@ -2855,7 +2872,7 @@ function setupCourseAuthoring() {
     chapter.blocks.push({
       id,
       type: 'diagram',
-      position: { fen: game.fen() },
+      position: { path: getXpgnNodePath(currentNode) },
       caption: 'Position ' + (chapter.blocks.filter(block => block.type === 'diagram' || block.type === 'exercise').length + 1),
     });
     showCourseReader(currentXpgnCourse.chapters.length - 1);
