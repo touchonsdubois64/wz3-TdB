@@ -554,7 +554,8 @@ body:not(.locked) #board piece { cursor: grab; }
 body.marking #board, body.marking #board piece { cursor: crosshair; }
 
 .marks-panel {
-    width: var(--board); margin: 0 0 12px var(--rl); padding: 8px;
+    box-sizing: border-box; width: var(--board); min-width: var(--board); max-width: var(--board);
+    margin: 0 0 12px var(--rl); padding: 8px;
     display: flex; flex-direction: column; gap: 7px;
     border: 1px solid var(--line); border-radius: 6px; background: var(--panel);
     --mk: clamp(21px, calc(var(--sq) * .5), 30px);
@@ -562,8 +563,10 @@ body.marking #board, body.marking #board piece { cursor: crosshair; }
 .marks-panel[hidden] { display: none; }
 .marks-row { display: flex; flex-wrap: wrap; gap: 4px; }
 .marks-colors { gap: 6px; align-items: center; }
-.marks-collapse { margin-left: auto; width: 26px; height: 24px; padding: 0; border: 1px solid var(--edge); border-radius: 4px; background: var(--panel); color: var(--ink); font: bold 20px/1 Arial, sans-serif; cursor: pointer; }
-.marks-collapse:hover { background: var(--hover); }
+.marks-collapse { flex: 0 0 24px; display: inline-flex; align-items: center; justify-content: center; align-self: center; width: 24px; height: 24px; margin: 0 1px 0 auto; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--ink); cursor: pointer; }
+.marks-collapse svg { display: block; width: 22px; height: 16px; overflow: visible; }
+.marks-collapse svg path { fill: none; stroke: currentColor; stroke-width: 2.1; stroke-linecap: round; stroke-linejoin: round; }
+.marks-collapse:hover { background: transparent; color: var(--accent, #2f6fd6); }
 .marks-panel.collapsed > .marks-tabs,
 .marks-panel.collapsed > .marks-content,
 .marks-panel.collapsed > .marks-footer { display: none !important; }
