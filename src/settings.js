@@ -95,6 +95,7 @@ export function setupSettings({ button, menu }) {
       element.type = 'button';
       element.className = 'settings-preset settings-theme' + (settings.theme === id ? ' selected' : '');
       element.dataset.theme = id;
+      element.setAttribute('aria-pressed', settings.theme === id ? 'true' : 'false');
       element.textContent = label;
       element.addEventListener('click', () => change({ ...settings, theme: id }));
       themes.appendChild(element);
@@ -113,6 +114,7 @@ export function setupSettings({ button, menu }) {
       element.type = 'button';
       element.className = 'settings-preset settings-theme' + (settings.board === id ? ' selected' : '');
       element.dataset.board = id;
+      element.setAttribute('aria-pressed', settings.board === id ? 'true' : 'false');
       element.title = id === 'diag' ? 'Rendu diagramme de livre : cases blanches et hachurées, contour noir' : 'Cases colorées';
       element.textContent = label;
       element.addEventListener('click', () => change({ ...settings, board: id }));
@@ -136,6 +138,7 @@ export function setupSettings({ button, menu }) {
       const element = document.createElement('button');
       element.type = 'button';
       element.className = 'settings-preset' + (preset.light === settings.light && preset.dark === settings.dark ? ' selected' : '');
+      element.setAttribute('aria-pressed', preset.light === settings.light && preset.dark === settings.dark ? 'true' : 'false');
       element.innerHTML =
         `<span class="settings-swatch"><i style="background:${preset.light}"></i><i style="background:${preset.dark}"></i></span>` +
         `<span>${preset.label}</span>`;
@@ -150,6 +153,7 @@ export function setupSettings({ button, menu }) {
       const wrapper = document.createElement('label');
       const input = document.createElement('input');
       input.type = 'color';
+      input.setAttribute('aria-label', `Couleur des cases ${label.toLowerCase()}`);
       input.value = settings[key];
       input.addEventListener('input', () => change({ ...settings, [key]: input.value }, false));
       wrapper.append(document.createTextNode(label), input);
@@ -177,6 +181,7 @@ export function setupSettings({ button, menu }) {
       element.type = 'button';
       element.className = 'settings-preset settings-theme' + (settings.coords === size.id ? ' selected' : '');
       element.dataset.coords = size.id;
+      element.setAttribute('aria-pressed', settings.coords === size.id ? 'true' : 'false');
       element.textContent = size.label;
       element.addEventListener('click', () => change({ ...settings, coords: size.id }));
       coords.appendChild(element);
