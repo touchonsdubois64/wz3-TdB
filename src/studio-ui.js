@@ -214,6 +214,27 @@ const initStudioUi = () => {
   const marksPanel = document.querySelector('#marks-panel');
   const boardColumn = document.querySelector('.left');
   if (marksPanel && boardColumn && marksPanel.parentElement !== boardColumn) boardColumn.prepend(marksPanel);
+  // Garder le bloc Analyse exactement au niveau du haut de l'échiquier,
+  // même si le titre ou le panneau d'annotations modifie la hauteur au-dessus.
+  const syncAnalysisAlignment = () => {
+    const evalRow = evaluationColumn.querySelector('.eval-row');
+    const boardWrapper = document.querySelector('.board-wrapper');
+    if (!evalRow || !boardWrapper || !boardWrapper.getClientRects().length) return;
+    const gap = boardWrapper.getBoundingClientRect().top - evalRow.getBoundingClientRect().top;
+    evalRow.style.marginTop = Math.max(0, gap) + 'px';
+  };
+  const scheduleAnalysisAlignment = () => window.requestAnimationFrame(syncAnalysisAlignment);
+  window.addEventListener('resize', scheduleAnalysisAlignment);
+  if (typeof ResizeObserver !== 'undefined' && boardColumn) {
+    const analysisResizeObserver = new ResizeObserver(scheduleAnalysisAlignment);
+    analysisResizeObserver.observe(boardColumn);
+    if (marksPanel) analysisResizeObserver.observe(marksPanel);
+  }
+  if (marksPanel && typeof MutationObserver !== 'undefined') {
+    const analysisMutationObserver = new MutationObserver(scheduleAnalysisAlignment);
+    analysisMutationObserver.observe(marksPanel, { attributes: true, childList: true, subtree: true });
+  }
+  scheduleAnalysisAlignment();
   // La palette reste affichée au-dessus de l'échiquier : aucun bouton crayon séparé.
 
   // Exporter le diagramme courant en PNG ou JPEG.
