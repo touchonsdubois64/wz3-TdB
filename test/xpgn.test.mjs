@@ -290,3 +290,19 @@ test('le validateur borne le nombre et la taille des annotations XPGN', () => {
   };
   assert.throws(() => validateXpgnDocument(tooManyItems), /100 éléments graphiques/);
 });
+
+
+test('le validateur contrôle la structure des six champs FEN', () => {
+  for (const fen of [
+    '8/8/8/8/8/8/8/7 w - - 0 1',
+    '8/8/8/8/8/8/8/8 x - - 0 1',
+    '8/8/8/8/8/8/8/8 w KK - 0 1',
+    '8/8/8/8/8/8/8/8 w - e4 0 1',
+    '8/8/8/8/8/8/8/8 w - - -1 1',
+    '8/8/8/8/8/8/8/8 w - - 0 0',
+  ]) {
+    const doc = courseOnly();
+    doc.course.chapters[0].blocks[2].position = { fen };
+    assert.throws(() => validateXpgnDocument(doc), /structure FEN/);
+  }
+});
