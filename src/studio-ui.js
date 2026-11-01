@@ -188,7 +188,7 @@ const initStudioUi = () => {
   const exportDiagram = (format) => {
     const fenField = document.querySelector('#fen');
     const fen = (fenField && fenField.value.trim()) || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR';
-    const rows = fen.split(/\\s+/)[0].split('/');
+    const rows = fen.split(/\s+/)[0].split('/');
     const glyphs = { K:'♔', Q:'♕', R:'♖', B:'♗', N:'♘', P:'♙', k:'♚', q:'♛', r:'♜', b:'♝', n:'♞', p:'♟' };
     let board;
     try {
