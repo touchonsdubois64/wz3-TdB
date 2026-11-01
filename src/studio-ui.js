@@ -139,11 +139,18 @@ const initStudioUi = () => {
   pgnFileInput.addEventListener('change', async () => {
     const file = pgnFileInput.files && pgnFileInput.files[0];
     if (!file) return;
-    const field = document.querySelector('#pgn');
-    field.value = (await file.text()).replace(/\\s+/g, ' ').trim();
-    field.dispatchEvent(new Event('change', { bubbles: true }));
-    window.setTimeout(closeDrawer, 220);
-    pgnFileInput.value = '';
+    try {
+      const raw = await file.text();
+      if (!raw.trim()) { window.alert('Le fichier PGN est vide.'); return; }
+      const field = document.querySelector('#pgn');
+      field.value = raw.replace(/\\s+/g, ' ').trim();
+      field.dispatchEvent(new Event('change', { bubbles: true }));
+      window.setTimeout(closeDrawer, 220);
+    } catch (error) {
+      window.alert('Impossible de lire ce fichier PGN : ' + (error && error.message ? error.message : 'erreur de lecture'));
+    } finally {
+      pgnFileInput.value = '';
+    }
   });
   positionTools.prepend(browsePgn);
 
