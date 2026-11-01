@@ -2546,7 +2546,7 @@ function setupXpgnControls() {
 const COURSE_PIECES = { K:'♔',Q:'♕',R:'♖',B:'♗',N:'♘',P:'♙',k:'♚',q:'♛',r:'♜',b:'♝',n:'♞',p:'♟' };
 let courseReaderDialog = null;
 function courseDiagram(fen) {
-  const placement = String(fen || '').trim().split(/\\s+/)[0];
+  const placement = String(fen || '').trim().split(/\s+/)[0];
   const rows = placement.split('/');
   if (rows.length !== 8) return null;
   const board = document.createElement('div');
