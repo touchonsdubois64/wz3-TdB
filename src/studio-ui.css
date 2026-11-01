@@ -583,3 +583,56 @@
   .studio-position-tools .cell-pgn,
   .studio-position-tools .cell-fen { width: 100%; }
 }
+
+
+/* Panneaux superposés à la colonne d'outils : largeur utile sans pousser l'échiquier. */
+@media (orientation: landscape) and (min-width: 1260px) and (min-height: 520px),
+       (orientation: landscape) and (pointer: coarse) and (min-width: 600px) and (max-height: 520px) {
+  .workspace > .right { position: relative; }
+  .workspace > .right > .studio-toolbar { position: relative; z-index: 41; }
+  .workspace > .right > .studio-drawer {
+    position: absolute;
+    top: 42px;
+    left: 0;
+    width: min(520px, calc(100vw - 150px));
+    max-width: calc(100vw - 150px);
+    max-height: calc(100dvh - 90px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    margin: 0;
+    box-shadow: 0 10px 35px rgba(0,0,0,.24);
+  }
+  .workspace > .right > .studio-position-tools {
+    position: absolute;
+    z-index: 40;
+    top: 42px;
+    left: 0;
+    width: min(300px, calc(100vw - 150px));
+    max-width: calc(100vw - 150px);
+    max-height: calc(100dvh - 90px);
+    overflow-y: auto;
+  }
+  .studio-tool-panel[data-category="records"] .studio-panel-content {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 8px;
+    overflow-x: hidden;
+  }
+  .studio-tool-panel[data-category="records"] .studio-panel-content > button,
+  .studio-tool-panel[data-category="records"] .studio-panel-content > .export-pgn-button,
+  .studio-tool-panel[data-category="records"] .studio-panel-content > .xpgn-action-button {
+    max-width: 100%;
+    min-width: 0;
+    white-space: normal;
+  }
+  .studio-tool-panel[data-category="settings"] .studio-panel-content { width: 100%; }
+  .studio-tool-panel[data-category="settings"] .settings-menu { padding: 0; }
+  .studio-position-tools #palette {
+    grid-template-columns: 34px 34px;
+    grid-template-rows: repeat(6, 34px);
+    justify-content: start;
+    align-content: start;
+  }
+}
