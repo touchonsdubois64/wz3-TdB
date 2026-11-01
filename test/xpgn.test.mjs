@@ -127,6 +127,24 @@ test('la mise en forme des blocs texte est conservée et normalisée', () => {
   });
 });
 
+test('les polices et tailles de texte autorisées sont conservées', () => {
+  const doc = courseOnly();
+  doc.course.chapters[0].blocks[1].style = { fontFamily: 'serif', fontSize: 24 };
+  const parsed = parseXpgn(stringifyXpgn(doc));
+  assert.deepEqual(parsed.course.chapters[0].blocks[1].style, { fontFamily: 'serif', fontSize: 24 });
+});
+
+test('le validateur refuse les tailles et polices de texte non autorisées', () => {
+  for (const style of [
+    { fontSize: 9 }, { fontSize: 49 }, { fontSize: 14.5 },
+    { fontFamily: 'Comic Sans' },
+  ]) {
+    const doc = courseOnly();
+    doc.course.chapters[0].blocks[1].style = style;
+    assert.throws(() => validateXpgnDocument(doc));
+  }
+});
+
 test('le validateur refuse les styles de texte non autorisés', () => {
   for (const style of [
     { align: 'middle' }, { columns: 3 }, { bold: 'yes' },
