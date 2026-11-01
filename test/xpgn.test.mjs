@@ -284,6 +284,7 @@ test('le validateur borne le nombre et la taille des annotations XPGN', () => {
 
   const tooManyItems = {
     format: 'XPGN', version: 1,
+    game: { pgn: '1. e4 *' },
     annotations: [{
       at: { path: [] },
       items: Array.from({ length: 101 }, () => ({ type: 'circle', orig: 'e4', brush: 'green' })),
