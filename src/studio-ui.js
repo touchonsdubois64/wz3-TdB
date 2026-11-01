@@ -133,8 +133,9 @@ const initStudioUi = () => {
   document.body.appendChild(pgnFileInput);
   const browsePgn = document.createElement('button');
   browsePgn.type = 'button';
-  browsePgn.className = 'studio-position-action';
-  browsePgn.innerHTML = '<span aria-hidden="true">📂</span> Naviguer — ouvrir un PGN';
+  browsePgn.className = 'studio-position-action studio-position-browse';
+  browsePgn.setAttribute('aria-label', 'Naviguer dans les fichiers et importer un PGN ou un XPGN');
+  browsePgn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H10l2 2h7.5A1.5 1.5 0 0 1 21 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z"/><path d="M3 9h18"/></svg><span>Naviguer — importer PGN / XPGN</span>';
   browsePgn.addEventListener('click', () => pgnFileInput.click());
   pgnFileInput.addEventListener('change', async () => {
     const file = pgnFileInput.files && pgnFileInput.files[0];
