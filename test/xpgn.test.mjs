@@ -115,6 +115,29 @@ const courseOnly = () => ({
   },
 });
 
+test('la mise en forme des blocs texte est conservée et normalisée', () => {
+  const doc = courseOnly();
+  doc.course.chapters[0].blocks[1].style = {
+    align: 'justify', columns: 2, bold: true, italic: true,
+    underline: false, color: '#AABBCC',
+  };
+  const parsed = parseXpgn(stringifyXpgn(doc));
+  assert.deepEqual(parsed.course.chapters[0].blocks[1].style, {
+    align: 'justify', columns: 2, bold: true, italic: true, color: '#aabbcc',
+  });
+});
+
+test('le validateur refuse les styles de texte non autorisés', () => {
+  for (const style of [
+    { align: 'middle' }, { columns: 3 }, { bold: 'yes' },
+    { color: 'red' }, { color: '#fff' }, [],
+  ]) {
+    const doc = courseOnly();
+    doc.course.chapters[0].blocks[1].style = style;
+    assert.throws(() => validateXpgnDocument(doc));
+  }
+});
+
 test('un cours XPGN autonome peut contenir texte, diagrammes et exercices', () => {
   const parsed = parseXpgn(stringifyXpgn(courseOnly()));
   assert.equal(parsed.game, undefined);
