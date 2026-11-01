@@ -150,12 +150,6 @@ function validatePositionRef(position, label, gameIds, hasDefaultGame) {
 
 function normalizeCourse(course, gameIds, hasDefaultGame) {
   if (!course || typeof course !== 'object' || Array.isArray(course)) fail('course invalide.');
-  const title = accountForText(course.title, 'course.title', 300);
-  if (!Array.isArray(course.chapters) || course.chapters.length === 0) {
-    fail('un cours doit contenir au moins un chapitre.');
-  }
-  if (course.chapters.length > 200) fail('un cours ne peut pas dépasser 200 chapitres.');
-  let totalBlocks = 0;
   let totalCourseText = 0;
   const accountForText = (value, label, max) => {
     const text = requireText(value, label, max);
@@ -163,6 +157,12 @@ function normalizeCourse(course, gameIds, hasDefaultGame) {
     if (totalCourseText > 5000000) fail('le contenu textuel du cours dépasse la limite totale de 5 Mo.');
     return text;
   };
+  const title = accountForText(course.title, 'course.title', 300);
+  if (!Array.isArray(course.chapters) || course.chapters.length === 0) {
+    fail('un cours doit contenir au moins un chapitre.');
+  }
+  if (course.chapters.length > 200) fail('un cours ne peut pas dépasser 200 chapitres.');
+  let totalBlocks = 0;
   const chapterIds = new Set();
   const chapters = course.chapters.map((chapter, chapterIndex) => {
     const label = 'chapitre ' + chapterIndex;
