@@ -252,7 +252,7 @@ const initStudioUi = () => {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'export-pgn-button xpgn-action-button studio-diagram-download';
-    button.innerHTML = '<span class="studio-download-mark" aria-hidden="true">↓</span><span aria-hidden="true">▦</span> Télécharger le diagramme (' + label + ')';
+    button.innerHTML = '<svg class="studio-download-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11m-4-4 4 4 4-4M5 17v3h14v-3"/></svg><svg class="studio-board-mark" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/><path d="M3 3h6v6H3zM15 3h6v6h-6zM9 9h6v6H9zM3 15h6v6H3zM15 15h6v6h-6z" fill="currentColor" stroke="none"/></svg><span>Télécharger le diagramme (' + label + ')</span>';
     button.addEventListener('click', () => exportDiagram(format));
     panels.get('records').content.appendChild(button);
   }
