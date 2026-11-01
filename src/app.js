@@ -2563,6 +2563,24 @@ function courseDiagram(fen) {
   });
   return board;
 }
+function readXpgnTextStyle(form) {
+  const data = new FormData(form);
+  const style = {
+    align: String(data.get('textAlign') || 'left'),
+    columns: Number(data.get('textColumns') || 1),
+    color: String(data.get('textColor') || '#222222').toLowerCase(),
+    bold: data.has('textBold'),
+    italic: data.has('textItalic'),
+    underline: data.has('textUnderline'),
+  };
+  return Object.fromEntries(Object.entries(style).filter(([key, value]) =>
+    (key === 'align' && value !== 'left') ||
+    (key === 'columns' && value !== 1) ||
+    (key === 'color' && value !== '#222222') ||
+    (['bold', 'italic', 'underline'].includes(key) && value === true)
+  ));
+}
+
 function renderCourseChapter(index) {
   if (!currentXpgnCourse || !courseReaderDialog) return;
   const course = currentXpgnCourse;
@@ -2581,6 +2599,16 @@ function renderCourseChapter(index) {
       const p = document.createElement('p');
       p.className = 'xpgn-course-text';
       p.textContent = block.text;
+      const style = block.style || {};
+      p.style.textAlign = style.align || 'left';
+      if (style.color) p.style.color = style.color;
+      if (style.bold) p.style.fontWeight = '700';
+      if (style.italic) p.style.fontStyle = 'italic';
+      if (style.underline) p.style.textDecoration = 'underline';
+      if (style.columns === 2) {
+        p.classList.add('xpgn-course-columns');
+        p.style.columnCount = '2';
+      }
       body.appendChild(p);
     } else if (block.type === 'diagram' || block.type === 'exercise') {
       const section = document.createElement('section');
@@ -2878,6 +2906,14 @@ function setupCourseAuthoring() {
       <label>Explication
         <textarea name="text" rows="5" maxlength="20000" required placeholder="Rédigez votre explication…"></textarea>
       </label>
+      <div class="xpgn-text-format" aria-label="Mise en forme du texte">
+          <label>Alignement<select name="textAlign"><option value="left">Gauche</option><option value="center">Centré</option><option value="right">Droite</option><option value="justify">Justifié</option></select></label>
+          <label>Colonnes<select name="textColumns"><option value="1">Une</option><option value="2">Deux</option></select></label>
+          <label>Couleur<input name="textColor" type="color" value="#222222"></label>
+          <label class="xpgn-format-check"><input name="textBold" type="checkbox"> Gras</label>
+          <label class="xpgn-format-check"><input name="textItalic" type="checkbox"> Italique</label>
+          <label class="xpgn-format-check"><input name="textUnderline" type="checkbox"> Souligné</label>
+        </div>
       <label class="xpgn-course-check">
         <input name="diagram" type="checkbox" checked>
         Ajouter la position actuellement affichée comme diagramme
@@ -2909,7 +2945,7 @@ function setupCourseAuthoring() {
     }
     const blocks = [
       { id: 'introduction', type: 'heading', text: 'Introduction', level: 2 },
-      { id: 'explication', type: 'text', text: explanation },
+      { id: 'explication', type: 'text', text: explanation, ...(Object.keys(readXpgnTextStyle(form)).length ? { style: readXpgnTextStyle(form) } : {}) },
     ];
     if (data.get('diagram') && rootNode && currentNode) {
       blocks.push({
@@ -3003,6 +3039,14 @@ function setupCourseAuthoring() {
       <label class="xpgn-add-text-field">Texte
         <textarea name="text" rows="6" maxlength="20000" placeholder="Rédigez l’explication…"></textarea>
       </label>
+      <div class="xpgn-text-format" aria-label="Mise en forme du texte">
+          <label>Alignement<select name="textAlign"><option value="left">Gauche</option><option value="center">Centré</option><option value="right">Droite</option><option value="justify">Justifié</option></select></label>
+          <label>Colonnes<select name="textColumns"><option value="1">Une</option><option value="2">Deux</option></select></label>
+          <label>Couleur<input name="textColor" type="color" value="#222222"></label>
+          <label class="xpgn-format-check"><input name="textBold" type="checkbox"> Gras</label>
+          <label class="xpgn-format-check"><input name="textItalic" type="checkbox"> Italique</label>
+          <label class="xpgn-format-check"><input name="textUnderline" type="checkbox"> Souligné</label>
+        </div>
       <label class="xpgn-add-exercise-field" hidden>Consigne de l’exercice
         <textarea name="prompt" rows="3" maxlength="5000" placeholder="Que doit trouver le lecteur ?"></textarea>
       </label>
@@ -3056,7 +3100,7 @@ function setupCourseAuthoring() {
         showMessage('Le texte du bloc ne peut pas être vide.', 'error', pgnMessage);
         return;
       }
-      chapter.blocks.push({ id, type: 'text', text });
+      chapter.blocks.push({ id, type: 'text', text, ...(Object.keys(readXpgnTextStyle(addBlockForm)).length ? { style: readXpgnTextStyle(addBlockForm) } : {}) });
     } else {
       const prompt = String(data.get('prompt') || '').trim();
       const child = currentNode && currentNode.children[Number(data.get('move'))];
