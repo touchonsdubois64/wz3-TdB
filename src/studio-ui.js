@@ -168,14 +168,18 @@ const initStudioUi = () => {
     field.dispatchEvent(new Event('change', { bubbles: true }));
     window.setTimeout(closeDrawer, 220);
   };
-  for (const [label, fen, symbol] of [
-    ['Position initiale', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', '🚩'],
-    ['Échiquier vide', '8/8/8/8/8/8/8/8 w - - 0 1', '▦']
+  for (const [label, fen, icon] of [
+    ['Position initiale', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', 'starting-position.svg'],
+    ['Échiquier vide', '8/8/8/8/8/8/8/8 w - - 0 1', 'empty-board.svg']
   ]) {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'studio-position-action studio-position-preset';
-    button.innerHTML = '<span aria-hidden="true">' + symbol + '</span> ' + label;
+    const image = document.createElement('img');
+    image.src = new URL('docs/images/' + icon, document.baseURI).href;
+    image.alt = '';
+    image.setAttribute('aria-hidden', 'true');
+    button.append(image, document.createTextNode(label));
     button.addEventListener('click', () => setFen(fen));
     presets.appendChild(button);
   }
