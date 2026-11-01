@@ -2458,6 +2458,12 @@ async function downloadXpgn() {
 
 function openXpgnFile(file) {
   return new Promise((resolve) => {
+  const maxFileSize = 25 * 1024 * 1024;
+  if (file && file.size > maxFileSize) {
+    showMessage('Fichier XPGN trop volumineux : la taille maximale autorisée est de 25 Mo.', 'error', pgnMessage);
+    resolve(false);
+    return;
+  }
   const reader = new FileReader();
   reader.onload = () => {
     try {
