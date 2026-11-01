@@ -3022,6 +3022,15 @@ function setupCourseAuthoring() {
       : currentXpgnCourse.chapters.length - 1;
   };
 
+  const getCourseBlockCount = () => currentXpgnCourse
+    ? currentXpgnCourse.chapters.reduce((total, chapter) => total + chapter.blocks.length, 0)
+    : 0;
+  const canAddCourseBlock = () => {
+    if (getCourseBlockCount() < 5000) return true;
+    showMessage('Limite atteinte : un cours ne peut pas dépasser 5 000 blocs. Supprimez du contenu avant d’en ajouter.', 'error', pgnMessage);
+    return false;
+  };
+
   const addPositionButton = document.createElement('button');
   addPositionButton.type = 'button';
   addPositionButton.className = 'export-pgn-button xpgn-action-button';
@@ -3036,6 +3045,7 @@ function setupCourseAuthoring() {
       showMessage('Affichez d’abord une position de partie sur l’échiquier.', 'info', pgnMessage);
       return;
     }
+    if (!canAddCourseBlock()) return;
     const chapterIndex = getActiveCourseChapterIndex();
     const chapter = currentXpgnCourse.chapters[chapterIndex];
     const usedIds = new Set(chapter.blocks.map(block => block.id).filter(Boolean));
@@ -3115,6 +3125,7 @@ function setupCourseAuthoring() {
   addBlockForm.addEventListener('submit', event => {
     event.preventDefault();
     if (!currentXpgnCourse || !currentXpgnCourse.chapters.length) return;
+    if (!canAddCourseBlock()) return;
     const chapterIndex = getActiveCourseChapterIndex();
     const chapter = currentXpgnCourse.chapters[chapterIndex];
     const data = new FormData(addBlockForm);
@@ -3185,6 +3196,11 @@ function setupCourseAuthoring() {
   chapterForm.addEventListener('submit', event => {
     event.preventDefault();
     if (!currentXpgnCourse) return;
+    if (currentXpgnCourse.chapters.length >= 200) {
+      showMessage('Limite atteinte : un cours ne peut pas dépasser 200 chapitres.', 'error', pgnMessage);
+      return;
+    }
+    if (!canAddCourseBlock()) return;
     const title = String(new FormData(chapterForm).get('title') || '').trim();
     if (!title) return;
     const usedChapterIds = new Set(currentXpgnCourse.chapters.map(chapter => chapter.id));
