@@ -184,23 +184,15 @@ const initStudioUi = () => {
   if (marksPanel && boardColumn && marksPanel.parentElement !== boardColumn) boardColumn.prepend(marksPanel);
   // La palette reste affichée au-dessus de l'échiquier : aucun bouton crayon séparé.
 
-  // Exporter le diagramme courant en image PNG, sans dépendance externe.
-  const diagramButton = document.createElement('button');
-  diagramButton.type = 'button';
-  diagramButton.className = 'export-pgn-button xpgn-action-button studio-diagram-download';
-  diagramButton.innerHTML = '<span class="studio-download-mark" aria-hidden="true">↓</span><span aria-hidden="true">▦</span> Télécharger le diagramme (PNG)';
-  diagramButton.addEventListener('click', () => {
+  // Exporter le diagramme courant en PNG ou JPEG.
+  const exportDiagram = (format) => {
     const fenField = document.querySelector('#fen');
     const fen = (fenField && fenField.value.trim()) || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR';
-    const placement = fen.split(/\s+/)[0];
-    const rows = placement.split('/');
-    if (rows.length !== 8) {
-      window.alert('La position affichée ne contient pas un FEN valide.');
-      return;
-    }
+    const rows = fen.split(/\\s+/)[0].split('/');
     const glyphs = { K:'♔', Q:'♕', R:'♖', B:'♗', N:'♘', P:'♙', k:'♚', q:'♛', r:'♜', b:'♝', n:'♞', p:'♟' };
     let board;
     try {
+      if (rows.length !== 8) throw new Error('FEN invalide');
       board = rows.map(row => {
         const squares = [];
         for (const char of row) {
@@ -211,7 +203,6 @@ const initStudioUi = () => {
         if (squares.length !== 8) throw new Error('FEN invalide');
         return squares;
       });
-      if (board.length !== 8) throw new Error('FEN invalide');
     } catch (error) {
       window.alert('La position ne peut pas être exportée : FEN invalide.');
       return;
@@ -236,16 +227,25 @@ const initStudioUi = () => {
         ctx.shadowBlur = 0;
       }
     }
+    const mime = format === 'jpeg' ? 'image/jpeg' : 'image/png';
+    const extension = format === 'jpeg' ? 'jpg' : 'png';
     canvas.toBlob(blob => {
       if (!blob) { window.alert('La création de l’image a échoué.'); return; }
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = url; link.download = 'diagramme-echecs.png';
+      link.href = url; link.download = 'diagramme-echecs.' + extension;
       link.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-    }, 'image/png');
-  });
-  panels.get('records').content.appendChild(diagramButton);
+    }, mime, format === 'jpeg' ? 0.94 : undefined);
+  };
+  for (const [format, label] of [['png', 'PNG'], ['jpeg', 'JPEG']]) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'export-pgn-button xpgn-action-button studio-diagram-download';
+    button.innerHTML = '<span class="studio-download-mark" aria-hidden="true">↓</span><span aria-hidden="true">▦</span> Télécharger le diagramme (' + label + ')';
+    button.addEventListener('click', () => exportDiagram(format));
+    panels.get('records').content.appendChild(button);
+  }
 
   // Harmoniser visuellement les deux exports avec une flèche de téléchargement.
   for (const button of panels.get('records').content.querySelectorAll('button')) {
