@@ -536,5 +536,4 @@
     outline-offset: 2px;
   }
   .studio-panel-content .settings-colorblock { min-width: 0; }
-  .studio-panel-content .settings-colorblock.inactive { pointer-events: none; }
 }
