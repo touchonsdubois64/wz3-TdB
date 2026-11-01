@@ -3085,6 +3085,8 @@ function setupCourseAuthoring() {
         <textarea name="text" rows="6" maxlength="20000" placeholder="Rédigez l’explication…"></textarea>
       </label>
       <div class="xpgn-text-format" aria-label="Mise en forme du texte">
+          <label>Police<select name="textFontFamily"><option value="sans-serif">Sans serif</option><option value="serif">Serif</option><option value="monospace">Monospace</option></select></label>
+          <label>Taille<select name="textFontSize"><option value="12">12</option><option value="14" selected>14</option><option value="16">16</option><option value="18">18</option><option value="20">20</option><option value="24">24</option><option value="28">28</option><option value="32">32</option></select></label>
           <label>Alignement<select name="textAlign"><option value="left">Gauche</option><option value="center">Centré</option><option value="right">Droite</option><option value="justify">Justifié</option></select></label>
           <label>Colonnes<select name="textColumns"><option value="1">Une</option><option value="2">Deux</option></select></label>
           <label>Couleur<input name="textColor" type="color" value="#222222"></label>
