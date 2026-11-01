@@ -103,7 +103,7 @@ const initStudioUi = () => {
     '<p><strong>Enregistrements :</strong> donne accès aux fonctions d’export et de sauvegarde. <strong>Création :</strong> permet de créer un cours, d’ajouter des positions et du contenu pédagogique.</p>' +
     '<p><strong>Position :</strong> permet de charger une partie ou une position au format PGN, XPGN ou FEN, ou de préparer une position en plaçant manuellement les figurines.</p>' +
     '<p>La palette située au-dessus de l’échiquier sert aux annotations graphiques : couleurs, symboles, formes et flèches. Les commandes d’évaluation permettent de lancer l’analyse Stockfish et d’afficher les zones d’évaluation.</p>' +
-    '<p>Les coups de la partie apparaissent dans le panneau de droite. La navigation permet de parcourir les positions successives de la partie.</p></div>');
+    '<p>Les coups de la partie apparaissent dans le panneau de droite. La navigation permet de parcourir les positions successives de la partie.</p></div>';
   document.body.appendChild(infoDialog);
   infoDialog.querySelector('.studio-info-close').addEventListener('click', () => infoDialog.close());
   infoDialog.addEventListener('click', event => { if (event.target === infoDialog) infoDialog.close(); });
