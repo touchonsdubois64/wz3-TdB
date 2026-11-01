@@ -47,15 +47,17 @@ function normalizeAnnotation(annotation, index) {
     fail('élément graphique non reconnu dans l’annotation ' + index + '.');
   }
 
-  const scope = annotation.scope || { branch: 'node', durationPlies: 0 };
+  const scope = annotation.scope === undefined ? { branch: 'node', durationPlies: 0 } : annotation.scope;
+  if (!scope || typeof scope !== 'object' || Array.isArray(scope)) fail('scope de l’annotation ' + index + ' invalide.');
   if ((scope.branch || 'node') !== 'node') fail('portée de branche non prise en charge en version 1.');
   if (!Number.isInteger(scope.durationPlies ?? 0) || (scope.durationPlies ?? 0) < 0 ||
       (scope.durationPlies ?? 0) > 1000) {
     fail('durationPlies doit être un entier compris entre 0 et 1000.');
   }
+  if (annotation.id !== undefined) requireText(annotation.id, 'annotation ' + index + '.id', 100);
 
   return {
-    ...(typeof annotation.id === 'string' && annotation.id ? { id: annotation.id } : {}),
+    ...(annotation.id !== undefined ? { id: annotation.id } : {}),
     at: { path: [...at.path] },
     scope: { branch: 'node', durationPlies: scope.durationPlies ?? 0 },
     items: decoded.items,
