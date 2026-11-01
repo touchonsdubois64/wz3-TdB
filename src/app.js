@@ -2511,9 +2511,14 @@ function openXpgnFile(file) {
 }
 
 function setupXpgnControls() {
-  window.addEventListener('xpgn:open-file', (event) => {
+  window.addEventListener('xpgn:open-file', async (event) => {
     const file = event.detail && event.detail.file;
-    if (file) openXpgnFile(file);
+    if (!file) return;
+    try {
+      await openXpgnFile(file);
+    } catch (error) {
+      showMessage('Impossible d’ouvrir ce fichier XPGN : ' + (error && error.message ? error.message : 'fichier invalide'), 'error', pgnMessage);
+    }
   });
   const input = document.createElement('input');
   input.type = 'file';
