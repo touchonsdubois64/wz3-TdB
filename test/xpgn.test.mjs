@@ -277,7 +277,7 @@ test('le validateur borne le nombre et la taille des annotations XPGN', () => {
     game: { pgn: '1. e4 *' },
     annotations: Array.from({ length: 5001 }, (_, index) => ({
       id: 'annotation-' + index,
-      at: { path: [] }, items: [{ type: 'circle', orig: 'e4', brush: 'green' }],
+      at: { path: [] }, items: [{ type: 'shape', value: 'circle', color: 'rouge', key: 'e4' }],
     })),
   };
   assert.throws(() => validateXpgnDocument(tooMany), /5000 annotations/);
