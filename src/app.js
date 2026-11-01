@@ -2570,6 +2570,8 @@ function courseDiagram(fen) {
 function readXpgnTextStyle(form) {
   const data = new FormData(form);
   const style = {
+    fontFamily: String(data.get('textFontFamily') || 'sans-serif'),
+    fontSize: Number(data.get('textFontSize') || 14),
     align: String(data.get('textAlign') || 'left'),
     columns: Number(data.get('textColumns') || 1),
     color: String(data.get('textColor') || '#222222').toLowerCase(),
@@ -2578,6 +2580,8 @@ function readXpgnTextStyle(form) {
     underline: data.has('textUnderline'),
   };
   return Object.fromEntries(Object.entries(style).filter(([key, value]) =>
+    (key === 'fontFamily' && value !== 'sans-serif') ||
+    (key === 'fontSize' && value !== 14) ||
     (key === 'align' && value !== 'left') ||
     (key === 'columns' && value !== 1) ||
     (key === 'color' && value !== '#222222') ||
@@ -2605,6 +2609,8 @@ function renderCourseChapter(index) {
       p.textContent = block.text;
       const style = block.style || {};
       p.style.textAlign = style.align || 'left';
+      p.style.fontFamily = style.fontFamily || 'sans-serif';
+      if (style.fontSize) p.style.fontSize = style.fontSize + 'px';
       if (style.color) p.style.color = style.color;
       if (style.bold) p.style.fontWeight = '700';
       if (style.italic) p.style.fontStyle = 'italic';
@@ -2911,6 +2917,8 @@ function setupCourseAuthoring() {
         <textarea name="text" rows="5" maxlength="20000" required placeholder="Rédigez votre explication…"></textarea>
       </label>
       <div class="xpgn-text-format" aria-label="Mise en forme du texte">
+          <label>Police<select name="textFontFamily"><option value="sans-serif">Sans serif</option><option value="serif">Serif</option><option value="monospace">Monospace</option></select></label>
+          <label>Taille<select name="textFontSize"><option value="12">12</option><option value="14" selected>14</option><option value="16">16</option><option value="18">18</option><option value="20">20</option><option value="24">24</option><option value="28">28</option><option value="32">32</option></select></label>
           <label>Alignement<select name="textAlign"><option value="left">Gauche</option><option value="center">Centré</option><option value="right">Droite</option><option value="justify">Justifié</option></select></label>
           <label>Colonnes<select name="textColumns"><option value="1">Une</option><option value="2">Deux</option></select></label>
           <label>Couleur<input name="textColor" type="color" value="#222222"></label>
