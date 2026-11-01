@@ -430,6 +430,10 @@
     width: 100%; min-width: 0;
   }
   .studio-position-tools .studio-position-presets button { min-width: 0; white-space: normal; }
+  .studio-position-tools .studio-position-preset img {
+    display: block; width: 30px; height: 30px; flex: 0 0 30px;
+    object-fit: contain;
+  }
   .studio-position-tools > .cell-palette { display: flex; flex-direction: column; align-items: flex-start; width: 100%; }
   .studio-position-tools #palette {
     display: grid; grid-template-columns: repeat(2, minmax(0, 34px));
