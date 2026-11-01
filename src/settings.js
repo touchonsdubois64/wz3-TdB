@@ -118,24 +118,6 @@ export function setupSettings({ button, menu }) {
     }
     menu.appendChild(boards);
 
-    const coordTitle = document.createElement('p');
-    coordTitle.className = 'settings-section';
-    coordTitle.textContent = 'Coordonnées';
-    menu.appendChild(coordTitle);
-
-    const coords = document.createElement('div');
-    coords.className = 'settings-presets';
-    for (const size of COORD_SIZES) {
-      const element = document.createElement('button');
-      element.type = 'button';
-      element.className = 'settings-preset settings-theme' + (settings.coords === size.id ? ' selected' : '');
-      element.dataset.coords = size.id;
-      element.textContent = size.label;
-      element.addEventListener('click', () => change({ ...settings, coords: size.id }));
-      coords.appendChild(element);
-    }
-    menu.appendChild(coords);
-
     // les couleurs restent modifiables en mode « Diag. », mais sont sans effet tant qu'il est actif
     const colorBlock = document.createElement('div');
     colorBlock.className = 'settings-colorblock' + (settings.board === 'diag' ? ' inactive' : '');
@@ -180,10 +162,32 @@ export function setupSettings({ button, menu }) {
     colors.appendChild(reset);
     colorBlock.appendChild(colors);
 
-    const note = document.createElement('p');
-    note.className = 'settings-note';
-    note.textContent = 'D’autres réglages pourront être ajoutés ici.';
-    menu.appendChild(note);
+
+    const coordTitle = document.createElement('p');
+    coordTitle.className = 'settings-section';
+    coordTitle.textContent = 'Coordonnées';
+    menu.appendChild(coordTitle);
+
+    const coords = document.createElement('div');
+    coords.className = 'settings-presets';
+    for (const size of COORD_SIZES) {
+      const element = document.createElement('button');
+      element.type = 'button';
+      element.className = 'settings-preset settings-theme' + (settings.coords === size.id ? ' selected' : '');
+      element.dataset.coords = size.id;
+      element.textContent = size.label;
+      element.addEventListener('click', () => change({ ...settings, coords: size.id }));
+      coords.appendChild(element);
+    }
+    menu.appendChild(coords);
+
+    const notationTitle = document.createElement('p');
+    notationTitle.className = 'settings-section';
+    notationTitle.textContent = 'Type de notation';
+    menu.appendChild(notationTitle);
+    const notationMenu = document.querySelector('.notation-menu');
+    if (notationMenu && notationMenu.parentElement !== menu) menu.appendChild(notationMenu);
+
   }
 
   function change(next, redraw = true) {
