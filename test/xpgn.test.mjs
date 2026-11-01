@@ -308,3 +308,21 @@ test('le validateur contrôle la structure des six champs FEN', () => {
     assert.throws(() => validateXpgnDocument(doc), /structure FEN/);
   }
 });
+
+
+test('le validateur borne aussi la partie PGN principale', () => {
+  const oversized = { format: 'XPGN', version: 1, game: { pgn: 'x'.repeat(1000001) } };
+  assert.throws(() => validateXpgnDocument(oversized), /game.pgn/);
+
+  const tooManyIncludingDefault = {
+    format: 'XPGN', version: 1, game: { pgn: '1. e4 *' },
+    games: Array.from({ length: 500 }, (_, index) => ({ id: 'game-' + index, pgn: '1. d4 *' })),
+  };
+  assert.throws(() => validateXpgnDocument(tooManyIncludingDefault), /500 parties/);
+});
+
+test('le validateur borne les coups attendus des exercices', () => {
+  const doc = courseOnly();
+  doc.course.chapters[0].blocks[2].expectedMoves = Array.from({ length: 1001 }, () => 'e2e4');
+  assert.throws(() => validateXpgnDocument(doc), /1 à 1000 coups UCI/);
+});
