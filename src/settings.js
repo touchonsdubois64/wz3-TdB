@@ -197,10 +197,26 @@ export function setupSettings({ button, menu }) {
   }
 
   function change(next, redraw = true) {
+    const active = menu.contains(document.activeElement) ? document.activeElement : null;
+    const focusKey = active?.dataset?.theme ? 'theme:' + active.dataset.theme
+      : active?.dataset?.board ? 'board:' + active.dataset.board
+      : active?.dataset?.coords ? 'coords:' + active.dataset.coords
+      : active?.classList?.contains('settings-reset') ? 'reset'
+      : active?.type === 'color' ? 'color:' + (active.getAttribute('aria-label') || '') : null;
     settings = next;
     apply(settings);
     save(settings);
-    if (redraw) render();
+    if (redraw) {
+      render();
+      if (focusKey) {
+        const target = focusKey.startsWith('theme:') ? menu.querySelector('[data-theme="' + focusKey.slice(6) + '"]')
+          : focusKey.startsWith('board:') ? menu.querySelector('[data-board="' + focusKey.slice(6) + '"]')
+          : focusKey.startsWith('coords:') ? menu.querySelector('[data-coords="' + focusKey.slice(7) + '"]')
+          : focusKey === 'reset' ? menu.querySelector('.settings-reset')
+          : [...menu.querySelectorAll('input[type="color"]')].find((input) => input.getAttribute('aria-label') === focusKey.slice(6));
+        target?.focus();
+      }
+    }
   }
 
   button.addEventListener('click', (event) => {
