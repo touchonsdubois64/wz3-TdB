@@ -326,3 +326,15 @@ test('le validateur borne les coups attendus des exercices', () => {
   doc.course.chapters[0].blocks[2].expectedMoves = Array.from({ length: 1001 }, () => 'e2e4');
   assert.throws(() => validateXpgnDocument(doc), /1 à 1000 coups UCI/);
 });
+
+
+test('le validateur borne la taille textuelle cumulée des cours', () => {
+  const doc = courseOnly();
+  doc.course.chapters = [{
+    id: 'chapter-text', title: 'Textes',
+    blocks: Array.from({ length: 251 }, (_, index) => ({
+      id: 'text-' + index, type: 'text', text: 'x'.repeat(20000),
+    })),
+  }];
+  assert.throws(() => validateXpgnDocument(doc), /contenu textuel.*5 Mo/);
+});
