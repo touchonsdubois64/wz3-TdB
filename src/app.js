@@ -2457,6 +2457,7 @@ async function downloadXpgn() {
 }
 
 function openXpgnFile(file) {
+  return new Promise((resolve) => {
   const reader = new FileReader();
   reader.onload = () => {
     try {
@@ -2506,8 +2507,17 @@ function openXpgnFile(file) {
       showMessage('Fichier XPGN invalide : ' + error.message, 'error', pgnMessage);
     }
   };
-  reader.onerror = () => showMessage('Impossible de lire ce fichier XPGN.', 'error', pgnMessage);
+  reader.onerror = () => {
+    showMessage('Impossible de lire ce fichier XPGN.', 'error', pgnMessage);
+    resolve(false);
+  };
+  const originalOnload = reader.onload;
+  reader.onload = (event) => {
+    originalOnload(event);
+    resolve(true);
+  };
   reader.readAsText(file, 'UTF-8');
+  });
 }
 
 function setupXpgnControls() {
