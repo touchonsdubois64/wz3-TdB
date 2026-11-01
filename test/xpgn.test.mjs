@@ -338,3 +338,16 @@ test('le validateur borne la taille textuelle cumulée des cours', () => {
   }];
   assert.throws(() => validateXpgnDocument(doc), /contenu textuel.*5 Mo/);
 });
+
+
+test('le validateur borne la durée des annotations XPGN', () => {
+  const doc = {
+    format: 'XPGN', version: 1, game: { pgn: '1. e4 *' },
+    annotations: [{
+      at: { path: [] },
+      scope: { branch: 'node', durationPlies: 1001 },
+      items: [{ type: 'circle', orig: 'e4', brush: 'green' }],
+    }],
+  };
+  assert.throws(() => validateXpgnDocument(doc), /durationPlies.*0 et 1000/);
+});
