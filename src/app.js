@@ -3254,6 +3254,8 @@ function setupNotationMenu() {
   button.className = 'notation-menu-button';
   button.setAttribute('aria-haspopup', 'listbox');
   button.setAttribute('aria-expanded', 'false');
+  button.setAttribute('aria-controls', 'notation-options');
+  button.setAttribute('aria-label', 'Choisir le type de notation');
   button.title = 'Choisir la notation';
 
   const preview = document.createElement('span');
@@ -3264,8 +3266,10 @@ function setupNotationMenu() {
   button.append(preview, arrow);
 
   const list = document.createElement('div');
+  list.id = 'notation-options';
   list.className = 'notation-menu-list';
   list.setAttribute('role', 'listbox');
+  list.setAttribute('aria-label', 'Types de notation');
   list.hidden = true;
 
   const choices = [
@@ -3309,6 +3313,8 @@ function setupNotationMenu() {
     item.className = 'notation-menu-option';
     item.dataset.value = choice.value;
     item.setAttribute('role', 'option');
+    item.setAttribute('aria-label', choice.pieces ? 'Notation avec figurines' : 'Notation ' + choice.text);
+    item.setAttribute('aria-selected', 'false');
     fill(item, choice);
     item.addEventListener('click', () => {
       select.value = choice.value;
@@ -3318,16 +3324,50 @@ function setupNotationMenu() {
     list.appendChild(item);
   }
 
+  const openMenu = (focusSelected = false) => {
+    list.hidden = false;
+    button.setAttribute('aria-expanded', 'true');
+    if (focusSelected) {
+      const selected = list.querySelector('[aria-selected="true"]') || list.querySelector('.notation-menu-option');
+      if (selected) selected.focus();
+    }
+  };
   button.addEventListener('click', (event) => {
     event.stopPropagation();
-    list.hidden = !list.hidden;
-    button.setAttribute('aria-expanded', list.hidden ? 'false' : 'true');
+    if (list.hidden) openMenu();
+    else closeMenu();
+  });
+  button.addEventListener('keydown', (event) => {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      openMenu(true);
+    }
+  });
+  list.addEventListener('keydown', (event) => {
+    const options = [...list.querySelectorAll('.notation-menu-option')];
+    const current = options.indexOf(document.activeElement);
+    let next = current;
+    if (event.key === 'ArrowDown') next = (current + 1) % options.length;
+    else if (event.key === 'ArrowUp') next = (current - 1 + options.length) % options.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = options.length - 1;
+    else if (event.key === 'Escape') {
+      event.preventDefault();
+      closeMenu();
+      button.focus();
+      return;
+    } else return;
+    event.preventDefault();
+    options[next]?.focus();
   });
   document.addEventListener('click', (event) => {
     if (!menu.contains(event.target)) closeMenu();
   });
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') closeMenu();
+    if (event.key === 'Escape' && !list.hidden) {
+      closeMenu();
+      if (menu.contains(document.activeElement)) button.focus();
+    }
   });
   select.addEventListener('change', update);
 
