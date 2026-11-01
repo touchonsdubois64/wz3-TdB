@@ -346,7 +346,7 @@ test('le validateur borne la durée des annotations XPGN', () => {
     annotations: [{
       at: { path: [] },
       scope: { branch: 'node', durationPlies: 1001 },
-      items: [{ type: 'circle', orig: 'e4', brush: 'green' }],
+      items: [{ type: 'shape', value: 'circle', color: 'rouge', key: 'e4' }],
     }],
   };
   assert.throws(() => validateXpgnDocument(doc), /durationPlies.*0 et 1000/);
