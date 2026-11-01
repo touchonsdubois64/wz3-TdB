@@ -161,11 +161,12 @@ export function setupMarks({ layer, panel, buttons, isWhite, onActiveChange, onI
   collapseButton.title = 'Replier la palette';
   collapseButton.setAttribute('aria-label', 'Replier la palette');
   collapseButton.setAttribute('aria-expanded', 'true');
-  collapseButton.textContent = '⌃';
+  const chevron = (down) => `<svg viewBox="0 0 24 16" aria-hidden="true"><path d="${down ? 'M3 4 L12 10 L21 4' : 'M3 12 L12 6 L21 12'}" /></svg>`;
+  collapseButton.innerHTML = chevron(false);
   collapseButton.addEventListener('click', () => {
     collapsed = !collapsed;
     panel.classList.toggle('collapsed', collapsed);
-    collapseButton.textContent = collapsed ? '⌄' : '⌃';
+    collapseButton.innerHTML = chevron(collapsed);
     collapseButton.title = collapsed ? 'Déployer la palette' : 'Replier la palette';
     collapseButton.setAttribute('aria-label', collapseButton.title);
     collapseButton.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
