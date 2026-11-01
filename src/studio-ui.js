@@ -198,7 +198,7 @@ const initStudioUi = () => {
   const exportDiagram = async (format) => {
     const fenField = document.querySelector('#fen');
     const fen = (fenField && fenField.value.trim()) || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR';
-    const rows = fen.split(/\\s+/)[0].split('/');
+    const rows = fen.split(/\s+/)[0].split('/');
     const glyphs = { K:'♔', Q:'♕', R:'♖', B:'♗', N:'♘', P:'♙', k:'♚', q:'♛', r:'♜', b:'♝', n:'♞', p:'♟' };
     let board;
     try {
@@ -237,7 +237,7 @@ const initStudioUi = () => {
       const promise = new Promise((resolve) => {
         image.onload = () => resolve(image);
         image.onerror = () => resolve(null);
-        image.src = './pieces/alpha/' + color + role + '.svg';
+        image.src = new URL((import.meta.env.DEV ? './docs/pieces/alpha/' : './pieces/alpha/') + color + role + '.svg', document.baseURI).href;
       });
       imageCache.set(piece, promise);
       return promise;
