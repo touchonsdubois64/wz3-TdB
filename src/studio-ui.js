@@ -184,6 +184,63 @@ const initStudioUi = () => {
   if (marksPanel && boardColumn && marksPanel.parentElement !== boardColumn) boardColumn.prepend(marksPanel);
   // La palette reste affichée au-dessus de l'échiquier : aucun bouton crayon séparé.
 
+  // Exporter le diagramme courant en image PNG, sans dépendance externe.
+  const diagramButton = document.createElement('button');
+  diagramButton.type = 'button';
+  diagramButton.className = 'export-pgn-button xpgn-action-button studio-diagram-download';
+  diagramButton.innerHTML = '<span class="studio-download-mark" aria-hidden="true">↓</span><span aria-hidden="true">▦</span> Télécharger le diagramme (PNG)';
+  diagramButton.addEventListener('click', () => {
+    const fenField = document.querySelector('#fen');
+    const fen = (fenField && fenField.value.trim()) || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR';
+    const placement = fen.split(/\\s+/)[0];
+    const rows = placement.split('/');
+    if (rows.length !== 8) {
+      window.alert('La position affichée ne contient pas un FEN valide.');
+      return;
+    }
+    const glyphs = { K:'♔', Q:'♕', R:'♖', B:'♗', N:'♘', P:'♙', k:'♚', q:'♛', r:'♜', b:'♝', n:'♞', p:'♟' };
+    const board = rows.map(row => {
+      const squares = [];
+      for (const char of row) {
+        if (/^[1-8]$/.test(char)) for (let n = 0; n < Number(char); n++) squares.push('');
+        else if (glyphs[char]) squares.push(char);
+        else throw new Error('FEN invalide');
+      }
+      if (squares.length !== 8) throw new Error('FEN invalide');
+      return squares;
+    });
+    if (board.length !== 8) { window.alert('FEN invalide.'); return; }
+    const canvas = document.createElement('canvas');
+    const size = 960, square = size / 8;
+    canvas.width = size; canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    const light = getComputedStyle(document.documentElement).getPropertyValue('--board-light').trim() || '#f0d9b5';
+    const dark = getComputedStyle(document.documentElement).getPropertyValue('--board-dark').trim() || '#b58863';
+    for (let rank = 0; rank < 8; rank++) for (let file = 0; file < 8; file++) {
+      ctx.fillStyle = (rank + file) % 2 ? dark : light;
+      ctx.fillRect(file * square, rank * square, square, square);
+      const piece = board[rank][file];
+      if (piece) {
+        ctx.font = '104px "DejaVu Sans", "Segoe UI Symbol", serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = piece === piece.toUpperCase() ? '#fff' : '#171717';
+        ctx.shadowColor = piece === piece.toUpperCase() ? '#222' : '#fff';
+        ctx.shadowBlur = 2;
+        ctx.fillText(glyphs[piece], file * square + square / 2, rank * square + square / 2 + 5);
+        ctx.shadowBlur = 0;
+      }
+    }
+    canvas.toBlob(blob => {
+      if (!blob) { window.alert('La création de l’image a échoué.'); return; }
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url; link.download = 'diagramme-echecs.png';
+      link.click();
+      URL.revokeObjectURL(url);
+    }, 'image/png');
+  });
+  panels.get('records').content.appendChild(diagramButton);
+
   // Harmoniser visuellement les deux exports avec une flèche de téléchargement.
   for (const button of panels.get('records').content.querySelectorAll('button')) {
     if ((button.textContent || '').trim() === 'XPGN' && !button.querySelector('.studio-download-mark')) {
