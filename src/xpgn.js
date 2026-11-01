@@ -88,6 +88,14 @@ function normalizeTextStyle(style, label) {
     if (typeof style.color !== 'string' || !/^#[0-9a-f]{6}$/i.test(style.color)) fail(label + '.color doit être une couleur hexadécimale.');
     result.color = style.color.toLowerCase();
   }
+  if (style.fontSize !== undefined) {
+    if (!Number.isInteger(style.fontSize) || style.fontSize < 10 || style.fontSize > 48) fail(label + '.fontSize doit être un entier entre 10 et 48.');
+    result.fontSize = style.fontSize;
+  }
+  if (style.fontFamily !== undefined) {
+    if (!['sans-serif', 'serif', 'monospace'].includes(style.fontFamily)) fail(label + '.fontFamily invalide.');
+    result.fontFamily = style.fontFamily;
+  }
   return result;
 }
 
