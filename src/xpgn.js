@@ -49,8 +49,9 @@ function normalizeAnnotation(annotation, index) {
 
   const scope = annotation.scope || { branch: 'node', durationPlies: 0 };
   if ((scope.branch || 'node') !== 'node') fail('portée de branche non prise en charge en version 1.');
-  if (!Number.isInteger(scope.durationPlies ?? 0) || (scope.durationPlies ?? 0) < 0) {
-    fail('durationPlies doit être un entier positif ou nul.');
+  if (!Number.isInteger(scope.durationPlies ?? 0) || (scope.durationPlies ?? 0) < 0 ||
+      (scope.durationPlies ?? 0) > 1000) {
+    fail('durationPlies doit être un entier compris entre 0 et 1000.');
   }
 
   return {
