@@ -323,7 +323,7 @@ test('le validateur borne aussi la partie PGN principale', () => {
 
 test('le validateur borne les coups attendus des exercices', () => {
   const doc = courseOnly();
-  doc.course.chapters[0].blocks[2].expectedMoves = Array.from({ length: 1001 }, () => 'e2e4');
+  doc.course.chapters[0].blocks[3].expectedMoves = Array.from({ length: 1001 }, () => 'e2e4');
   assert.throws(() => validateXpgnDocument(doc), /1 à 1000 coups UCI/);
 });
 
