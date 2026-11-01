@@ -195,10 +195,10 @@ const initStudioUi = () => {
   // La palette reste affichée au-dessus de l'échiquier : aucun bouton crayon séparé.
 
   // Exporter le diagramme courant en PNG ou JPEG.
-  const exportDiagram = (format) => {
+  const exportDiagram = async (format) => {
     const fenField = document.querySelector('#fen');
     const fen = (fenField && fenField.value.trim()) || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR';
-    const rows = fen.split(/\s+/)[0].split('/');
+    const rows = fen.split(/\\s+/)[0].split('/');
     const glyphs = { K:'♔', Q:'♕', R:'♖', B:'♗', N:'♘', P:'♙', k:'♚', q:'♛', r:'♜', b:'♝', n:'♞', p:'♟' };
     let board;
     try {
@@ -217,24 +217,51 @@ const initStudioUi = () => {
       window.alert('La position ne peut pas être exportée : FEN invalide.');
       return;
     }
+
     const canvas = document.createElement('canvas');
     const size = 960, square = size / 8;
     canvas.width = size; canvas.height = size;
     const ctx = canvas.getContext('2d');
-    const light = getComputedStyle(document.documentElement).getPropertyValue('--board-light').trim() || '#f0d9b5';
-    const dark = getComputedStyle(document.documentElement).getPropertyValue('--board-dark').trim() || '#b58863';
-    for (let rank = 0; rank < 8; rank++) for (let file = 0; file < 8; file++) {
-      ctx.fillStyle = (rank + file) % 2 ? dark : light;
-      ctx.fillRect(file * square, rank * square, square, square);
-      const piece = board[rank][file];
-      if (piece) {
-        ctx.font = '104px "DejaVu Sans", "Segoe UI Symbol", serif';
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillStyle = piece === piece.toUpperCase() ? '#fff' : '#171717';
-        ctx.shadowColor = piece === piece.toUpperCase() ? '#222' : '#fff';
-        ctx.shadowBlur = 2;
-        ctx.fillText(glyphs[piece], file * square + square / 2, rank * square + square / 2 + 5);
-        ctx.shadowBlur = 0;
+    if (!ctx) { window.alert('La création de l’image a échoué.'); return; }
+    const boardStyle = document.querySelector('#board cg-board');
+    const rootStyle = getComputedStyle(document.documentElement);
+    const light = rootStyle.getPropertyValue('--board-light').trim() || '#f0d9b5';
+    const dark = rootStyle.getPropertyValue('--board-dark').trim() || '#b58863';
+    const blackOrientation = Boolean(document.querySelector('#board .orientation-black'));
+    const imageCache = new Map();
+    const loadPiece = (piece) => {
+      if (imageCache.has(piece)) return imageCache.get(piece);
+      const color = piece === piece.toUpperCase() ? 'w' : 'b';
+      const role = piece.toUpperCase();
+      const image = new Image();
+      const promise = new Promise((resolve) => {
+        image.onload = () => resolve(image);
+        image.onerror = () => resolve(null);
+        image.src = './pieces/alpha/' + color + role + '.svg';
+      });
+      imageCache.set(piece, promise);
+      return promise;
+    };
+    const pieces = [...new Set(board.flat().filter(Boolean))];
+    const loaded = await Promise.all(pieces.map(async piece => [piece, await loadPiece(piece)]));
+    const pieceImages = new Map(loaded);
+    for (let displayRank = 0; displayRank < 8; displayRank++) {
+      for (let displayFile = 0; displayFile < 8; displayFile++) {
+        const rank = blackOrientation ? 7 - displayRank : displayRank;
+        const file = blackOrientation ? 7 - displayFile : displayFile;
+        ctx.fillStyle = (displayRank + displayFile) % 2 ? dark : light;
+        ctx.fillRect(displayFile * square, displayRank * square, square, square);
+        const piece = board[rank][file];
+        if (!piece) continue;
+        const image = pieceImages.get(piece);
+        if (image) {
+          ctx.drawImage(image, displayFile * square + 5, displayRank * square + 5, square - 10, square - 10);
+        } else {
+          ctx.font = '104px "DejaVu Sans", "Segoe UI Symbol", serif';
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillStyle = piece === piece.toUpperCase() ? '#fff' : '#171717';
+          ctx.fillText(glyphs[piece], displayFile * square + square / 2, displayRank * square + square / 2 + 5);
+        }
       }
     }
     const mime = format === 'jpeg' ? 'image/jpeg' : 'image/png';
