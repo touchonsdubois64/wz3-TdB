@@ -115,15 +115,22 @@ function validatePositionRef(position, label, gameIds, hasDefaultGame) {
     const ranks = fields[0] ? fields[0].split('/') : [];
     const validBoard = ranks.length === 8 && ranks.every((rank) => {
       let squares = 0;
+      let previousWasDigit = false;
       for (const token of rank) {
-        if (/[1-8]/.test(token)) squares += Number(token);
-        else if (/[PNBRQKpnbrqk]/.test(token)) squares += 1;
-        else return false;
+        if (/[1-8]/.test(token)) {
+          if (previousWasDigit) return false;
+          squares += Number(token);
+          previousWasDigit = true;
+        } else if (/[PNBRQKpnbrqk]/.test(token)) {
+          squares += 1;
+          previousWasDigit = false;
+        } else return false;
       }
       return squares === 8;
     });
     const validCastling = fields[2] === '-' || (/^(?!.*(.).*\1)[KQkq]+$/.test(fields[2]));
-    const validEnPassant = fields[3] === '-' || /^[a-h][36]$/.test(fields[3]);
+    const validEnPassant = fields[3] === '-' ||
+      (/^[a-h][36]$/.test(fields[3]) && fields[3][1] === (fields[1] === 'w' ? '6' : '3'));
     if (fields.length !== 6 || !validBoard ||
         !['w', 'b'].includes(fields[1]) || !validCastling || !validEnPassant ||
         !/^\d+$/.test(fields[4]) || !/^[1-9]\d*$/.test(fields[5])) {
