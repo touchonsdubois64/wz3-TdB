@@ -142,8 +142,12 @@ const initStudioUi = () => {
     if (!file) return;
     try {
       if (file.name.toLowerCase().endsWith('.xpgn') || file.type === 'application/vnd.xpgn+json') {
-        window.dispatchEvent(new CustomEvent('xpgn:open-file', { detail: { file } }));
-        window.setTimeout(closeDrawer, 220);
+        await new Promise((resolve) => {
+          window.dispatchEvent(new CustomEvent('xpgn:open-file', {
+            detail: { file, onComplete: resolve }
+          }));
+        });
+        closeDrawer();
         return;
       }
       const raw = await file.text();
