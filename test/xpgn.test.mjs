@@ -364,3 +364,24 @@ test('le validateur rejette les rangées FEN et prises en passant incohérentes'
     assert.throws(() => validateXpgnDocument(doc), /structure FEN/);
   }
 });
+
+
+test('le validateur rejette les identifiants et portées d’annotations mal formés', () => {
+  const base = {
+    format: 'XPGN', version: 1, game: { pgn: '1. e4 *' },
+    annotations: [{
+      id: 'mark-1', at: { path: [] }, scope: { branch: 'node', durationPlies: 0 },
+      items: [{ type: 'shape', value: 'circle', color: 'rouge', key: 'e4' }],
+    }],
+  };
+  for (const change of [
+    { id: '   ' },
+    { id: 'x'.repeat(101) },
+    { scope: [] },
+    { scope: 'node' },
+  ]) {
+    const doc = structuredClone(base);
+    Object.assign(doc.annotations[0], change);
+    assert.throws(() => validateXpgnDocument(doc));
+  }
+});
