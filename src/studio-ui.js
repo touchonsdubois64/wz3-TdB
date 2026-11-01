@@ -128,7 +128,7 @@ const initStudioUi = () => {
   // Chargement direct d'un fichier PGN depuis l'ordinateur.
   const pgnFileInput = document.createElement('input');
   pgnFileInput.type = 'file';
-  pgnFileInput.accept = '.pgn,.txt,text/plain,application/x-chess-pgn';
+  pgnFileInput.accept = '.pgn,.txt,.xpgn,text/plain,application/x-chess-pgn,application/vnd.xpgn+json,application/json';
   pgnFileInput.hidden = true;
   document.body.appendChild(pgnFileInput);
   const browsePgn = document.createElement('button');
@@ -140,10 +140,15 @@ const initStudioUi = () => {
     const file = pgnFileInput.files && pgnFileInput.files[0];
     if (!file) return;
     try {
+      if (file.name.toLowerCase().endsWith('.xpgn') || file.type === 'application/vnd.xpgn+json') {
+        window.dispatchEvent(new CustomEvent('xpgn:open-file', { detail: { file } }));
+        window.setTimeout(closeDrawer, 220);
+        return;
+      }
       const raw = await file.text();
       if (!raw.trim()) { window.alert('Le fichier PGN est vide.'); return; }
       const field = document.querySelector('#pgn');
-      field.value = raw.replace(/\s+/g, ' ').trim();
+      field.value = raw.trim();
       field.dispatchEvent(new Event('change', { bubbles: true }));
       window.setTimeout(closeDrawer, 220);
     } catch (error) {
