@@ -18,7 +18,7 @@ const initStudioUi = () => {
   const icons = {
     info: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 10v7m0-10h.01"/></svg>',
     records: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3h14l3 3v15H3V4a1 1 0 0 1 1-1Z"/><path d="M7 3v6h10V3M7 21v-8h10v8"/></svg>',
-    settings: '<img src="./images/settings.svg" alt="" aria-hidden="true">',
+    settings: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6Z"/><path d="m19.4 13.5 1.1.9-1.5 2.6-1.4-.6a7.8 7.8 0 0 1-1.7 1l-.2 1.5h-3l-.3-1.5a7.8 7.8 0 0 1-1.7-1l-1.4.6-1.5-2.6 1.1-.9a7 7 0 0 1 0-2l-1.1-.9 1.5-2.6 1.4.6a7.8 7.8 0 0 1 1.7-1l.3-1.5h3l.2 1.5a7.8 7.8 0 0 1 1.7 1l1.4-.6 1.5 2.6-1.1.9a7 7 0 0 1 0 2Z"/></svg>
     create: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.5h9l5 5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z"/><path d="M14 3.5V9h5M12 12v6m-3-3h6"/></svg>',
     position: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h18v18H3zM3 12h18M12 3v18"/><path d="M7 7h2v2H7zM15 15h2v2h-2z" fill="currentColor"/><path d="M17.5 5.5v5m-2.5-2.5h5"/></svg>',
     analysis: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18"/><path d="M8 4h8v7H8zM8 13h8v7H8z" fill="none"/><path d="M8 4h8v7H8z" fill="#171717"/><path d="M8 13h8v7H8z" fill="#fff"/></svg>',
@@ -119,7 +119,8 @@ const initStudioUi = () => {
   }
 
   // Position : bibliothèque, chargement PGN/FEN et montage manuel.
-  for (const selector of ['.cell-library', '.cell-pgn', '.cell-fen', '.cell-palette', '.cell-start', '.cell-play', '.cell-hints']) {
+  // Conserver les champs et la palette de montage ; les commandes de jeu, de trait et d'indices restent hors de ce panneau.
+  for (const selector of ['.cell-library', '.cell-pgn', '.cell-fen', '.cell-palette']) {
     const element = document.querySelector(selector);
     if (element) positionTools.appendChild(element);
   }
