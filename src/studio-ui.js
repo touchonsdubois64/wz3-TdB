@@ -18,9 +18,9 @@ const initStudioUi = () => {
   const icons = {
     info: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 10v7m0-10h.01"/></svg>',
     records: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3h14l3 3v15H3V4a1 1 0 0 1 1-1Z"/><path d="M7 3v6h10V3M7 21v-8h10v8"/></svg>',
-    settings: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6Z"/><path d="m19.4 13.5 1.1.9-1.5 2.6-1.4-.6a7.8 7.8 0 0 1-1.7 1l-.2 1.5h-3l-.3-1.5a7.8 7.8 0 0 1-1.7-1l-1.4.6-1.5-2.6 1.1-.9a7 7 0 0 1 0-2l-1.1-.9 1.5-2.6 1.4.6a7.8 7.8 0 0 1 1.7-1l.3-1.5h3l.2 1.5a7.8 7.8 0 0 1 1.7 1l1.4-.6 1.5 2.6-1.1.9a7 7 0 0 1 0 2Z"/></svg>',
+    settings: '<img src="./images/settings.svg" alt="" aria-hidden="true">',
     create: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.5h9l5 5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z"/><path d="M14 3.5V9h5M12 12v6m-3-3h6"/></svg>',
-    position: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h18v18H3zM3 12h18M12 3v18"/><path d="M7 7h2v2H7zM15 15h2v2h-2z" fill="currentColor"/><path d="M17.5 5.5v5m-2.5-2.5h5"/></svg>',
+    position: '<img src="./images/create-position.svg" alt="" aria-hidden="true">',
     analysis: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18"/><path d="M8 4h8v7H8zM8 13h8v7H8z" fill="none"/><path d="M8 4h8v7H8z" fill="#171717"/><path d="M8 13h8v7H8z" fill="#fff"/></svg>',
     annotations: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3.5h10l5 5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z"/><path d="M14 3.5V9h5M7 13h8M7 16h5M15.5 17.5l4-4 1.5 1.5-4 4-2 .5z"/></svg>',
     save: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3h14l3 3v15H3V4a1 1 0 0 1 1-1Z"/><path d="M7 3v6h10V3M7 21v-8h10v8"/></svg>'
@@ -135,7 +135,7 @@ const initStudioUi = () => {
   browsePgn.type = 'button';
   browsePgn.className = 'studio-position-action studio-position-browse';
   browsePgn.setAttribute('aria-label', 'Naviguer dans les fichiers et importer un PGN ou un XPGN');
-  browsePgn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H10l2 2h7.5A1.5 1.5 0 0 1 21 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z"/><path d="M3 9h18"/></svg><span>Naviguer — importer PGN / XPGN</span>';
+  browsePgn.innerHTML = '<img src="' + new URL((import.meta.env.DEV ? 'docs/images/' : 'images/') + 'open-folder.svg', document.baseURI).href + '" alt="" aria-hidden="true">';
   browsePgn.addEventListener('click', () => pgnFileInput.click());
   pgnFileInput.addEventListener('change', async () => {
     const file = pgnFileInput.files && pgnFileInput.files[0];
@@ -192,7 +192,9 @@ const initStudioUi = () => {
     image.src = new URL((import.meta.env.DEV ? 'docs/images/' : 'images/') + icon, document.baseURI).href;
     image.alt = '';
     image.setAttribute('aria-hidden', 'true');
-    button.append(image, document.createTextNode(label));
+    button.append(image);
+    button.title = label;
+    button.setAttribute('aria-label', label);
     button.addEventListener('click', () => setFen(fen));
     presets.appendChild(button);
   }
@@ -207,7 +209,7 @@ const initStudioUi = () => {
   // La palette reste affichée au-dessus de l'échiquier : aucun bouton crayon séparé.
 
   // Exporter le diagramme courant en PNG ou JPEG.
-  const exportDiagram = async (format) => {
+  const exportDiagram = async (format, filename = 'diagramme-echecs') => {
     const fenField = document.querySelector('#fen');
     const fen = (fenField && fenField.value.trim()) || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR';
     const rows = fen.split(/\s+/)[0].split('/');
@@ -282,27 +284,53 @@ const initStudioUi = () => {
       if (!blob) { window.alert('La création de l’image a échoué.'); return; }
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = url; link.download = 'diagramme-echecs.' + extension;
+      link.href = url; link.download = filename.replace(/[\\/:*?"<>|]+/g, '-').replace(/\\s+/g, '-').slice(0, 80) + '.' + extension;
       link.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     }, mime, format === 'jpeg' ? 0.94 : undefined);
   };
-  for (const [format, label] of [['png', 'PNG'], ['jpeg', 'JPEG']]) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'export-pgn-button xpgn-action-button studio-diagram-download';
-    button.innerHTML = '<svg class="studio-download-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11m-4-4 4 4 4-4M5 17v3h14v-3"/></svg><svg class="studio-board-mark" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/><path d="M3 3h6v6H3zM15 3h6v6h-6zM9 9h6v6H9zM3 15h6v6H3zM15 15h6v6h-6z" fill="currentColor" stroke="none"/></svg><span>Télécharger le diagramme (' + label + ')</span>';
-    button.addEventListener('click', () => exportDiagram(format));
-    panels.get('records').content.appendChild(button);
-  }
+  const diagramButton = document.createElement('button');
+  diagramButton.type = 'button';
+  diagramButton.className = 'export-pgn-button xpgn-action-button studio-diagram-download';
+  diagramButton.title = 'Télécharger le diagramme';
+  diagramButton.setAttribute('aria-label', 'Télécharger le diagramme');
+  diagramButton.innerHTML = '<svg class="studio-board-mark" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19"/><path d="M8.83 2.5v19M15.16 2.5v19M2.5 8.83h19M2.5 15.16h19"/></svg><span>Télécharger le diagramme</span>';
+  diagramButton.addEventListener('click', async () => {
+    const format = window.prompt('Format du diagramme : png ou jpeg', 'png');
+    if (!format) return;
+    const normalized = format.trim().toLowerCase();
+    if (!['png', 'jpeg', 'jpg'].includes(normalized)) { window.alert('Choisis PNG ou JPEG.'); return; }
+    const name = window.prompt('Nom du fichier (sans extension)', 'diagramme-echecs');
+    if (name === null) return;
+    await exportDiagram(normalized === 'jpg' ? 'jpeg' : normalized, name.trim() || 'diagramme-echecs');
+  });
+  panels.get('records').content.appendChild(diagramButton);
 
-  // Harmoniser visuellement les deux exports avec une flèche de téléchargement.
+  // Un seul bouton de diagramme : le clic demande format et nom de fichier.
+  const diagramButton = panels.get('records').content.querySelector('.studio-diagram-download');
+  if (diagramButton) {
+    diagramButton.innerHTML = '<svg class="studio-board-mark" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19"/><path d="M8.83 2.5v19M15.16 2.5v19M2.5 8.83h19M2.5 15.16h19"/></svg><span>Télécharger le diagramme</span>';
+    diagramButton.addEventListener('click', async (event) => {
+      if (event.__diagramDialogHandled) return;
+      event.__diagramDialogHandled = true;
+      event.stopImmediatePropagation();
+      const format = window.prompt('Format du diagramme : png ou jpeg', 'png');
+      if (!format) return;
+      const normalized = format.trim().toLowerCase();
+      if (!['png', 'jpeg', 'jpg'].includes(normalized)) {
+        window.alert('Choisis PNG ou JPEG.');
+        return;
+      }
+      const name = window.prompt('Nom du fichier (sans extension)', 'diagramme-echecs');
+      if (name === null) return;
+      await exportDiagram(normalized === 'jpg' ? 'jpeg' : normalized, name.trim() || 'diagramme-echecs');
+    }, true);
+  }
   for (const button of panels.get('records').content.querySelectorAll('button')) {
     if ((button.textContent || '').trim() === 'XPGN' && !button.querySelector('.studio-download-mark')) {
       const mark = document.createElement('span');
       mark.className = 'studio-download-mark';
-      mark.setAttribute('aria-hidden', 'true');
-      mark.textContent = '↓';
+      mark.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4"/></svg>';
       button.prepend(mark);
     }
   }
