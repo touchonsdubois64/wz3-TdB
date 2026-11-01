@@ -2376,7 +2376,7 @@ function downloadPgn() {
   document.body.appendChild(link);
   link.click();
   link.remove();
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function setupPgnButton() {
@@ -2448,7 +2448,7 @@ async function downloadXpgn() {
     document.body.appendChild(link);
     link.click();
     link.remove();
-    URL.revokeObjectURL(url);
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     showMessage('Téléchargement XPGN lancé : ' + filename, 'success', pgnMessage);
   } catch (error) {
     if (error && error.name === 'AbortError') return;
