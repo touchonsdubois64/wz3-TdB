@@ -141,7 +141,15 @@ const initStudioUi = () => {
     const file = pgnFileInput.files && pgnFileInput.files[0];
     if (!file) return;
     try {
-      if (file.name.toLowerCase().endsWith('.xpgn') || file.type === 'application/vnd.xpgn+json') {
+      const isXpgn = file.name.toLowerCase().endsWith('.xpgn') || file.type === 'application/vnd.xpgn+json';
+      const maxSize = isXpgn ? 25 * 1024 * 1024 : 10 * 1024 * 1024;
+      if (file.size > maxSize) {
+        window.alert(isXpgn
+          ? 'Fichier XPGN trop volumineux : la taille maximale autorisée est de 25 Mo.'
+          : 'Fichier PGN trop volumineux : la taille maximale autorisée est de 10 Mo.');
+        return;
+      }
+      if (isXpgn) {
         await new Promise((resolve) => {
           window.dispatchEvent(new CustomEvent('xpgn:open-file', {
             detail: { file, onComplete: resolve }
