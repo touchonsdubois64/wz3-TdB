@@ -220,6 +220,7 @@ const initStudioUi = () => {
     const evalRow = evaluationColumn.querySelector('.eval-row');
     const boardWrapper = document.querySelector('.board-wrapper');
     if (!evalRow || !boardWrapper || !boardWrapper.getClientRects().length) return;
+    evalRow.style.marginTop = '0px';
     const gap = boardWrapper.getBoundingClientRect().top - evalRow.getBoundingClientRect().top;
     evalRow.style.marginTop = Math.max(0, gap) + 'px';
   };
