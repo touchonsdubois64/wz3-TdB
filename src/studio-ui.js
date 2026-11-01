@@ -18,9 +18,9 @@ const initStudioUi = () => {
   const icons = {
     info: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 10v7m0-10h.01"/></svg>',
     records: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3h14l3 3v15H3V4a1 1 0 0 1 1-1Z"/><path d="M7 3v6h10V3M7 21v-8h10v8"/></svg>',
-    settings: '<img src="./images/settings.svg" alt="" aria-hidden="true">',
+    settings: '<img src="' + new URL((import.meta.env.DEV ? 'docs/images/' : 'images/') + 'settings.svg', document.baseURI).href + '" alt="" aria-hidden="true">',
     create: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.5h9l5 5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z"/><path d="M14 3.5V9h5M12 12v6m-3-3h6"/></svg>',
-    position: '<img src="./images/create-position.svg" alt="" aria-hidden="true">',
+    position: '<img src="' + new URL((import.meta.env.DEV ? 'docs/images/' : 'images/') + 'create-position.svg', document.baseURI).href + '" alt="" aria-hidden="true">',
     analysis: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18"/><path d="M8 4h8v7H8zM8 13h8v7H8z" fill="none"/><path d="M8 4h8v7H8z" fill="#171717"/><path d="M8 13h8v7H8z" fill="#fff"/></svg>',
     annotations: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3.5h10l5 5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z"/><path d="M14 3.5V9h5M7 13h8M7 16h5M15.5 17.5l4-4 1.5 1.5-4 4-2 .5z"/></svg>',
     save: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3h14l3 3v15H3V4a1 1 0 0 1 1-1Z"/><path d="M7 3v6h10V3M7 21v-8h10v8"/></svg>'
@@ -199,6 +199,14 @@ const initStudioUi = () => {
     presets.appendChild(button);
   }
   positionTools.appendChild(presets);
+  // Ordre demandé : naviguer, répertoire, PGN, FEN, raccourcis, puis palette.
+  const libraryCell = positionTools.querySelector('.cell-library');
+  const pgnCell = positionTools.querySelector('.cell-pgn');
+  const fenCell = positionTools.querySelector('.cell-fen');
+  const paletteCell = positionTools.querySelector('.cell-palette');
+  positionTools.append(browsePgn, ...(libraryCell ? [libraryCell] : []),
+    ...(pgnCell ? [pgnCell] : []), ...(fenCell ? [fenCell] : []), presets,
+    ...(paletteCell ? [paletteCell] : []));
 
   // Analyse et annotations graphiques : on déplace les éléments existants, sans les recréer.
   // Le panneau d'évaluation reste près de l'échiquier ; la palette graphique
