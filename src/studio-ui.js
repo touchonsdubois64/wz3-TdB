@@ -214,21 +214,23 @@ const initStudioUi = () => {
   const marksPanel = document.querySelector('#marks-panel');
   const boardColumn = document.querySelector('.left');
   if (marksPanel && boardColumn && marksPanel.parentElement !== boardColumn) boardColumn.prepend(marksPanel);
-  // Garder le bloc Analyse exactement au niveau du haut de l'échiquier,
-  // même si le titre ou le panneau d'annotations modifie la hauteur au-dessus.
+  // La barre d'outils et ses panneaux sont en superposition : le bloc Analyse
+  // reste dans le flux et s'aligne sur le bord supérieur réel de l'échiquier.
   const syncAnalysisAlignment = () => {
     const evalRow = evaluationColumn.querySelector('.eval-row');
     const boardWrapper = document.querySelector('.board-wrapper');
     if (!evalRow || !boardWrapper || !boardWrapper.getClientRects().length) return;
-    evalRow.style.marginTop = '0px';
-    const gap = boardWrapper.getBoundingClientRect().top - evalRow.getBoundingClientRect().top;
-    evalRow.style.marginTop = Math.max(0, gap) + 'px';
+    const columnTop = evaluationColumn.getBoundingClientRect().top;
+    const boardTop = boardWrapper.getBoundingClientRect().top;
+    evalRow.style.marginTop = Math.max(0, boardTop - columnTop) + 'px';
   };
   const scheduleAnalysisAlignment = () => window.requestAnimationFrame(syncAnalysisAlignment);
   window.addEventListener('resize', scheduleAnalysisAlignment);
-  if (typeof ResizeObserver !== 'undefined' && boardColumn) {
+  if (typeof ResizeObserver !== 'undefined') {
     const analysisResizeObserver = new ResizeObserver(scheduleAnalysisAlignment);
-    analysisResizeObserver.observe(boardColumn);
+    if (boardColumn) analysisResizeObserver.observe(boardColumn);
+    const boardWrapper = document.querySelector('.board-wrapper');
+    if (boardWrapper) analysisResizeObserver.observe(boardWrapper);
     if (marksPanel) analysisResizeObserver.observe(marksPanel);
   }
   if (marksPanel && typeof MutationObserver !== 'undefined') {
@@ -343,6 +345,52 @@ const initStudioUi = () => {
       mark.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4"/></svg>';
       button.prepend(mark);
     }
+  }
+
+  // Éditeur de commentaires et de notes pédagogiques, placé au-dessus de la liste des coups.
+  // Le contenu est conservé localement entre les sessions de travail.
+  const frameRight = document.querySelector('#frame-right');
+  const moves = document.querySelector('#moves');
+  if (frameRight && moves) {
+    const editor = document.createElement('section');
+    editor.className = 'xpgn-side-notes';
+    editor.innerHTML = '<div class="xpgn-side-notes-head"><strong>Commentaires et notes</strong><span>Texte libre, indépendant des coups</span></div>' +
+      '<div class="xpgn-side-toolbar" role="toolbar" aria-label="Mise en forme des commentaires">' +
+      '<select data-format="fontName" aria-label="Police"><option value="Arial">Arial</option><option value="Georgia">Georgia</option><option value="Courier New">Courier</option></select>' +
+      '<select data-format="fontSize" aria-label="Taille"><option value="2">Petite</option><option value="3" selected>Normale</option><option value="4">Grande</option><option value="5">Très grande</option><option value="6">Titre</option></select>' +
+      '<button type="button" data-command="bold" title="Gras"><b>G</b></button><button type="button" data-command="italic" title="Italique"><i>I</i></button><button type="button" data-command="underline" title="Souligné"><u>S</u></button>' +
+      '<button type="button" data-command="justifyLeft" title="Aligner à gauche">☰</button><button type="button" data-command="justifyCenter" title="Centrer">≡</button><button type="button" data-command="justifyRight" title="Aligner à droite">☷</button>' +
+      '<button type="button" data-command="insertUnorderedList" title="Liste à puces">• Liste</button>' +
+      '<label class="xpgn-note-color" title="Couleur du texte">A<input type="color" value="#222222" aria-label="Couleur du texte"></label>' +
+      '<button type="button" data-columns="1" class="selected" title="Une colonne">1 col.</button><button type="button" data-columns="2" title="Deux colonnes">2 col.</button>' +
+      '</div><div class="xpgn-side-editor" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Commentaires et notes éditables" data-placeholder="Rédigez ici vos commentaires ou notes de cours…"></div>';
+    frameRight.insertBefore(editor, moves);
+    const editable = editor.querySelector('.xpgn-side-editor');
+    const storageKey = 'xpgn-studio-side-notes-v1';
+    try { editable.innerHTML = localStorage.getItem(storageKey) || ''; } catch {}
+    const saveNotes = () => { try { localStorage.setItem(storageKey, editable.innerHTML); } catch {} };
+    editable.addEventListener('input', saveNotes);
+    editor.querySelectorAll('[data-command]').forEach(button => button.addEventListener('click', () => {
+      editable.focus();
+      document.execCommand(button.dataset.command, false, null);
+      saveNotes();
+    }));
+    editor.querySelectorAll('select[data-format]').forEach(select => select.addEventListener('change', () => {
+      editable.focus();
+      document.execCommand(select.dataset.format, false, select.value);
+      saveNotes();
+    }));
+    editor.querySelector('input[type="color"]').addEventListener('input', event => {
+      editable.focus();
+      document.execCommand('foreColor', false, event.target.value);
+      saveNotes();
+    });
+    editor.querySelectorAll('[data-columns]').forEach(button => button.addEventListener('click', () => {
+      editable.classList.toggle('two-columns', button.dataset.columns === '2');
+      editor.querySelectorAll('[data-columns]').forEach(item => item.classList.toggle('selected', item === button));
+      saveNotes();
+    }));
+    if (editable.innerHTML.includes('xpgn-notes-two-columns')) editable.classList.add('two-columns');
   }
 
   // Les actions ont quitté leur ancienne ligne de notation.
