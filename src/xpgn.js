@@ -150,12 +150,19 @@ function validatePositionRef(position, label, gameIds, hasDefaultGame) {
 
 function normalizeCourse(course, gameIds, hasDefaultGame) {
   if (!course || typeof course !== 'object' || Array.isArray(course)) fail('course invalide.');
-  const title = requireText(course.title, 'course.title', 300);
+  const title = accountForText(course.title, 'course.title', 300);
   if (!Array.isArray(course.chapters) || course.chapters.length === 0) {
     fail('un cours doit contenir au moins un chapitre.');
   }
   if (course.chapters.length > 200) fail('un cours ne peut pas dépasser 200 chapitres.');
   let totalBlocks = 0;
+  let totalCourseText = 0;
+  const accountForText = (value, label, max) => {
+    const text = requireText(value, label, max);
+    totalCourseText += text.length;
+    if (totalCourseText > 5000000) fail('le contenu textuel du cours dépasse la limite totale de 5 Mo.');
+    return text;
+  };
   const chapterIds = new Set();
   const chapters = course.chapters.map((chapter, chapterIndex) => {
     const label = 'chapitre ' + chapterIndex;
@@ -163,7 +170,7 @@ function normalizeCourse(course, gameIds, hasDefaultGame) {
     const id = requireText(chapter.id, label + '.id', 100);
     if (chapterIds.has(id)) fail('identifiant de chapitre dupliqué : ' + id + '.');
     chapterIds.add(id);
-    const chapterTitle = requireText(chapter.title, label + '.title', 300);
+    const chapterTitle = accountForText(chapter.title, label + '.title', 300);
     if (!Array.isArray(chapter.blocks) || chapter.blocks.length === 0) fail(label + ' doit contenir au moins un bloc.');
     totalBlocks += chapter.blocks.length;
     if (totalBlocks > 5000) fail('un cours ne peut pas dépasser 5000 blocs.');
@@ -178,18 +185,18 @@ function normalizeCourse(course, gameIds, hasDefaultGame) {
         blockIds.add(normalized.id);
       }
       if (block.type === 'heading') {
-        normalized.text = requireText(block.text, blockLabel + '.text', 1000);
+        normalized.text = accountForText(block.text, blockLabel + '.text', 1000);
         normalized.level = block.level === undefined ? 2 : block.level;
         if (![2, 3, 4].includes(normalized.level)) fail(blockLabel + '.level doit valoir 2, 3 ou 4.');
       } else if (block.type === 'text') {
-        normalized.text = requireText(block.text, blockLabel + '.text', 20000);
+        normalized.text = accountForText(block.text, blockLabel + '.text', 20000);
         const style = normalizeTextStyle(block.style, blockLabel + '.style');
         if (style && Object.keys(style).length) normalized.style = style;
       } else if (block.type === 'diagram') {
         normalized.position = validatePositionRef(block.position, blockLabel + '.position', gameIds, hasDefaultGame);
-        if (block.caption !== undefined) normalized.caption = requireText(block.caption, blockLabel + '.caption', 1000);
+        if (block.caption !== undefined) normalized.caption = accountForText(block.caption, blockLabel + '.caption', 1000);
       } else if (block.type === 'exercise') {
-        normalized.prompt = requireText(block.prompt, blockLabel + '.prompt', 5000);
+        normalized.prompt = accountForText(block.prompt, blockLabel + '.prompt', 5000);
         normalized.position = validatePositionRef(block.position, blockLabel + '.position', gameIds, hasDefaultGame);
         if (!Array.isArray(block.expectedMoves) || block.expectedMoves.length === 0 ||
             block.expectedMoves.length > 1000 ||
@@ -197,7 +204,7 @@ function normalizeCourse(course, gameIds, hasDefaultGame) {
           fail(blockLabel + '.expectedMoves doit être une liste de 1 à 1000 coups UCI valides.');
         }
         normalized.expectedMoves = [...block.expectedMoves];
-        if (block.explanation !== undefined) normalized.explanation = requireText(block.explanation, blockLabel + '.explanation', 5000);
+        if (block.explanation !== undefined) normalized.explanation = accountForText(block.explanation, blockLabel + '.explanation', 5000);
       } else {
         fail(blockLabel + ' : type non pris en charge (' + String(block.type) + ').');
       }
@@ -206,9 +213,9 @@ function normalizeCourse(course, gameIds, hasDefaultGame) {
     return { id, title: chapterTitle, blocks };
   });
   const result = { title, chapters };
-  if (course.description !== undefined) result.description = requireText(course.description, 'course.description', 5000);
-  if (course.author !== undefined) result.author = requireText(course.author, 'course.author', 300);
-  if (course.language !== undefined) result.language = requireText(course.language, 'course.language', 35);
+  if (course.description !== undefined) result.description = accountForText(course.description, 'course.description', 5000);
+  if (course.author !== undefined) result.author = accountForText(course.author, 'course.author', 300);
+  if (course.language !== undefined) result.language = accountForText(course.language, 'course.language', 35);
   return result;
 }
 
