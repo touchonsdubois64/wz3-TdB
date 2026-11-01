@@ -205,6 +205,8 @@ export function validateXpgnDocument(document) {
     fail('game.pgn doit être un PGN non vide.');
   }
   if (document.games !== undefined && !Array.isArray(document.games)) fail('games doit être un tableau.');
+  if ((document.games || []).length > 500) fail('une bibliothèque XPGN ne peut pas dépasser 500 parties.');
+  let totalPgnCharacters = 0;
   const gameIds = new Set();
   const games = (document.games || []).map((entry, index) => {
     if (!entry || typeof entry !== 'object' || Array.isArray(entry)) fail('jeu ' + index + ' invalide.');
@@ -212,6 +214,8 @@ export function validateXpgnDocument(document) {
     if (gameIds.has(id)) fail('identifiant de jeu dupliqué : ' + id + '.');
     gameIds.add(id);
     const pgn = requireText(entry.pgn, 'jeu ' + index + '.pgn', 1000000);
+    totalPgnCharacters += pgn.length;
+    if (totalPgnCharacters > 20000000) fail('les parties de la bibliothèque dépassent la limite totale de 20 Mo.');
     return { id, pgn };
   });
   if (!hasDefaultGame && games.length === 0 && document.course === undefined) {
