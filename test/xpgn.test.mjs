@@ -184,7 +184,7 @@ test('le validateur refuse les références de jeu et les identifiants de bloc i
   assert.throws(() => validateXpgnDocument(badRef), /jeu inconnu/);
   const badMoves = courseOnly();
   badMoves.course.chapters[0].blocks[3].expectedMoves = ['e2-e4'];
-  assert.throws(() => validateXpgnDocument(badMoves), /liste non vide de coups UCI/);
+  assert.throws(() => validateXpgnDocument(badMoves), /liste de 1 à 1000 coups UCI valides/);
 });
 
 
