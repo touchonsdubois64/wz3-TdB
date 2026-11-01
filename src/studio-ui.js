@@ -143,7 +143,7 @@ const initStudioUi = () => {
       const raw = await file.text();
       if (!raw.trim()) { window.alert('Le fichier PGN est vide.'); return; }
       const field = document.querySelector('#pgn');
-      field.value = raw.replace(/\\s+/g, ' ').trim();
+      field.value = raw.replace(/\s+/g, ' ').trim();
       field.dispatchEvent(new Event('change', { bubbles: true }));
       window.setTimeout(closeDrawer, 220);
     } catch (error) {
@@ -192,7 +192,7 @@ const initStudioUi = () => {
   diagramButton.addEventListener('click', () => {
     const fenField = document.querySelector('#fen');
     const fen = (fenField && fenField.value.trim()) || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR';
-    const placement = fen.split(/\\s+/)[0];
+    const placement = fen.split(/\s+/)[0];
     const rows = placement.split('/');
     if (rows.length !== 8) {
       window.alert('La position affichée ne contient pas un FEN valide.');
