@@ -2528,6 +2528,8 @@ function setupXpgnControls() {
       await openXpgnFile(file);
     } catch (error) {
       showMessage('Impossible d’ouvrir ce fichier XPGN : ' + (error && error.message ? error.message : 'fichier invalide'), 'error', pgnMessage);
+    } finally {
+      if (typeof event.detail.onComplete === 'function') event.detail.onComplete();
     }
   });
   const input = document.createElement('input');
