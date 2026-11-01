@@ -121,11 +121,11 @@ function validatePositionRef(position, label, gameIds, hasDefaultGame) {
       }
       return squares === 8;
     });
-    const validCastling = fields[2] === '-' || (/^(?!.*(.).*\\1)[KQkq]+$/.test(fields[2]));
+    const validCastling = fields[2] === '-' || (/^(?!.*(.).*\1)[KQkq]+$/.test(fields[2]));
     const validEnPassant = fields[3] === '-' || /^[a-h][36]$/.test(fields[3]);
     if (fields.length !== 6 || !validBoard ||
         !['w', 'b'].includes(fields[1]) || !validCastling || !validEnPassant ||
-        !/^\\d+$/.test(fields[4]) || !/^[1-9]\\d*$/.test(fields[5])) {
+        !/^\d+$/.test(fields[4]) || !/^[1-9]\d*$/.test(fields[5])) {
       fail(label + '.fen ne respecte pas la structure FEN attendue.');
     }
     if (position.gameId !== undefined) {
