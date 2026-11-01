@@ -170,7 +170,7 @@ const initStudioUi = () => {
   };
   for (const [label, fen, symbol] of [
     ['Position initiale', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', '🚩'],
-    ['Échiquier vide', '8/8/8/8/8/8/8/8', '▦']
+    ['Échiquier vide', '8/8/8/8/8/8/8/8 w - - 0 1', '▦']
   ]) {
     const button = document.createElement('button');
     button.type = 'button';
