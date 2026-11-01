@@ -215,3 +215,20 @@ test('un même chapitre conserve plusieurs positions pédagogiques dans leur ord
   assert.equal(parsed.course.chapters[0].blocks.length, 6);
   assert.deepEqual(parsed.course.chapters[0].blocks.slice(-2).map(block => block.caption), ['Opposition', 'Retour à la position initiale']);
 });
+
+
+test('le validateur borne la taille structurelle des cours', () => {
+  const tooManyChapters = courseOnly();
+  tooManyChapters.course.chapters = Array.from({ length: 201 }, (_, index) => ({
+    id: 'chapter-' + index, title: 'Chapitre ' + index,
+    blocks: [{ type: 'text', text: 'Contenu' }],
+  }));
+  assert.throws(() => validateXpgnDocument(tooManyChapters), /200 chapitres/);
+
+  const tooManyBlocks = courseOnly();
+  tooManyBlocks.course.chapters = [{
+    id: 'chapter-large', title: 'Grand chapitre',
+    blocks: Array.from({ length: 5001 }, () => ({ type: 'text', text: 'Contenu' })),
+  }];
+  assert.throws(() => validateXpgnDocument(tooManyBlocks), /5000 blocs/);
+});
