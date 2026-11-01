@@ -269,3 +269,24 @@ test('le validateur borne les bibliothèques de parties XPGN', () => {
   };
   assert.throws(() => validateXpgnDocument(tooMuchPgn), /20 Mo/);
 });
+
+
+test('le validateur borne le nombre et la taille des annotations XPGN', () => {
+  const tooMany = {
+    format: 'XPGN', version: 1,
+    annotations: Array.from({ length: 5001 }, (_, index) => ({
+      id: 'annotation-' + index,
+      at: { path: [] }, items: [{ type: 'circle', orig: 'e4', brush: 'green' }],
+    })),
+  };
+  assert.throws(() => validateXpgnDocument(tooMany), /5000 annotations/);
+
+  const tooManyItems = {
+    format: 'XPGN', version: 1,
+    annotations: [{
+      at: { path: [] },
+      items: Array.from({ length: 101 }, () => ({ type: 'circle', orig: 'e4', brush: 'green' })),
+    }],
+  };
+  assert.throws(() => validateXpgnDocument(tooManyItems), /100 éléments graphiques/);
+});
