@@ -34,9 +34,11 @@ function normalizeAnnotation(annotation, index) {
   if (!at || !Array.isArray(at.path) || !at.path.every((move) => typeof move === 'string' && UCI_MOVE.test(move))) {
     fail('chemin de coups invalide pour l’annotation ' + index + '.');
   }
+  if (at.path.length > 1000) fail('le chemin de l’annotation ' + index + ' dépasse 1000 demi-coups.');
   if (!Array.isArray(annotation.items) || annotation.items.length === 0) {
     fail('l’annotation ' + index + ' doit contenir au moins un élément.');
   }
+  if (annotation.items.length > 100) fail('l’annotation ' + index + ' dépasse 100 éléments graphiques.');
 
   // Existing marks encoding is reused as the canonical graphic-item validator.
   const encoded = encodeMarks(annotation.items);
@@ -223,6 +225,7 @@ export function validateXpgnDocument(document) {
   }
   const sourceAnnotations = document.annotations === undefined ? [] : document.annotations;
   if (!Array.isArray(sourceAnnotations)) fail('la liste annotations doit être un tableau.');
+  if (sourceAnnotations.length > 5000) fail('un document XPGN ne peut pas dépasser 5000 annotations.');
 
   const ids = new Set();
   const annotations = sourceAnnotations.map((annotation, index) => {
