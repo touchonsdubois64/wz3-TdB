@@ -232,3 +232,40 @@ test('le validateur borne la taille structurelle des cours', () => {
   }];
   assert.throws(() => validateXpgnDocument(tooManyBlocks), /5000 blocs/);
 });
+
+
+test('le validateur borne les bibliothèques de parties XPGN', () => {
+  const tooManyGames = {
+    format: 'XPGN', version: 1,
+    games: Array.from({ length: 501 }, (_, index) => ({ id: 'game-' + index, pgn: '1. e4' })),
+  };
+  assert.throws(() => validateXpgnDocument(tooManyGames), /500 parties/);
+
+  const tooMuchPgn = {
+    format: 'XPGN', version: 1,
+    games: [
+      { id: 'game-a', pgn: 'x'.repeat(1000000) },
+      { id: 'game-b', pgn: 'x'.repeat(1000000) },
+      { id: 'game-c', pgn: 'x'.repeat(1000000) },
+      { id: 'game-d', pgn: 'x'.repeat(1000000) },
+      { id: 'game-e', pgn: 'x'.repeat(1000000) },
+      { id: 'game-f', pgn: 'x'.repeat(1000000) },
+      { id: 'game-g', pgn: 'x'.repeat(1000000) },
+      { id: 'game-h', pgn: 'x'.repeat(1000000) },
+      { id: 'game-i', pgn: 'x'.repeat(1000000) },
+      { id: 'game-j', pgn: 'x'.repeat(1000000) },
+      { id: 'game-k', pgn: 'x'.repeat(1000000) },
+      { id: 'game-l', pgn: 'x'.repeat(1000000) },
+      { id: 'game-m', pgn: 'x'.repeat(1000000) },
+      { id: 'game-n', pgn: 'x'.repeat(1000000) },
+      { id: 'game-o', pgn: 'x'.repeat(1000000) },
+      { id: 'game-p', pgn: 'x'.repeat(1000000) },
+      { id: 'game-q', pgn: 'x'.repeat(1000000) },
+      { id: 'game-r', pgn: 'x'.repeat(1000000) },
+      { id: 'game-s', pgn: 'x'.repeat(1000000) },
+      { id: 'game-t', pgn: 'x'.repeat(1000000) },
+      { id: 'game-u', pgn: 'x'.repeat(1000000) },
+    ],
+  };
+  assert.throws(() => validateXpgnDocument(tooMuchPgn), /20 Mo/);
+});
