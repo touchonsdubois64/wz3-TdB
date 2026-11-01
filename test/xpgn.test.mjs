@@ -351,3 +351,16 @@ test('le validateur borne la durée des annotations XPGN', () => {
   };
   assert.throws(() => validateXpgnDocument(doc), /durationPlies.*0 et 1000/);
 });
+
+
+test('le validateur rejette les rangées FEN et prises en passant incohérentes', () => {
+  for (const fen of [
+    '44/8/8/8/8/8/8/8 w - - 0 1',
+    '8/8/8/8/8/8/8/8 w - e3 0 1',
+    '8/8/8/8/8/8/8/8 b - e6 0 1',
+  ]) {
+    const doc = courseOnly();
+    doc.course.chapters[0].blocks[2].position = { fen };
+    assert.throws(() => validateXpgnDocument(doc), /structure FEN/);
+  }
+});
