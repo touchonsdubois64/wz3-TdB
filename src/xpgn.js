@@ -192,8 +192,9 @@ function normalizeCourse(course, gameIds, hasDefaultGame) {
         normalized.prompt = requireText(block.prompt, blockLabel + '.prompt', 5000);
         normalized.position = validatePositionRef(block.position, blockLabel + '.position', gameIds, hasDefaultGame);
         if (!Array.isArray(block.expectedMoves) || block.expectedMoves.length === 0 ||
+            block.expectedMoves.length > 1000 ||
             !block.expectedMoves.every((move) => typeof move === 'string' && UCI_MOVE.test(move))) {
-          fail(blockLabel + '.expectedMoves doit être une liste non vide de coups UCI.');
+          fail(blockLabel + '.expectedMoves doit être une liste de 1 à 1000 coups UCI valides.');
         }
         normalized.expectedMoves = [...block.expectedMoves];
         if (block.explanation !== undefined) normalized.explanation = requireText(block.explanation, blockLabel + '.explanation', 5000);
@@ -217,13 +218,18 @@ export function validateXpgnDocument(document) {
   if (document.format !== XPGN_FORMAT) fail('signature de format absente ou inconnue.');
   if (document.version !== XPGN_VERSION) fail('version non prise en charge : ' + document.version + '.');
   const hasDefaultGame = document.game !== undefined;
-  if (hasDefaultGame && (!document.game || typeof document.game !== 'object' ||
-      typeof document.game.pgn !== 'string' || !document.game.pgn.trim())) {
-    fail('game.pgn doit être un PGN non vide.');
+  if (hasDefaultGame && (!document.game || typeof document.game !== 'object' || Array.isArray(document.game))) {
+    fail('game doit être un objet PGN valide.');
+  }
+  let totalPgnCharacters = 0;
+  let defaultGamePgn;
+  if (hasDefaultGame) {
+    defaultGamePgn = requireText(document.game.pgn, 'game.pgn', 1000000);
+    totalPgnCharacters += defaultGamePgn.length;
   }
   if (document.games !== undefined && !Array.isArray(document.games)) fail('games doit être un tableau.');
-  if ((document.games || []).length > 500) fail('une bibliothèque XPGN ne peut pas dépasser 500 parties.');
-  let totalPgnCharacters = 0;
+  if ((document.games || []).length + (hasDefaultGame ? 1 : 0) > 500) fail('une bibliothèque XPGN ne peut pas dépasser 500 parties.');
+
   const gameIds = new Set();
   const games = (document.games || []).map((entry, index) => {
     if (!entry || typeof entry !== 'object' || Array.isArray(entry)) fail('jeu ' + index + ' invalide.');
@@ -251,7 +257,7 @@ export function validateXpgnDocument(document) {
   });
 
   const normalized = { format: XPGN_FORMAT, version: XPGN_VERSION, annotations };
-  if (hasDefaultGame) normalized.game = { pgn: document.game.pgn };
+  if (hasDefaultGame) normalized.game = { pgn: defaultGamePgn };
   if (games.length) normalized.games = games;
   if (document.course !== undefined) normalized.course = normalizeCourse(document.course, gameIds, hasDefaultGame);
   return normalized;
