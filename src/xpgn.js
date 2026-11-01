@@ -66,6 +66,31 @@ function requireText(value, label, max = 20000) {
   return value;
 }
 
+function normalizeTextStyle(style, label) {
+  if (style === undefined) return undefined;
+  if (!style || typeof style !== 'object' || Array.isArray(style)) fail(label + ' invalide.');
+  const result = {};
+  if (style.align !== undefined) {
+    if (!['left', 'center', 'right', 'justify'].includes(style.align)) fail(label + '.align invalide.');
+    result.align = style.align;
+  }
+  if (style.columns !== undefined) {
+    if (![1, 2].includes(style.columns)) fail(label + '.columns doit valoir 1 ou 2.');
+    result.columns = style.columns;
+  }
+  for (const key of ['bold', 'italic', 'underline']) {
+    if (style[key] !== undefined) {
+      if (typeof style[key] !== 'boolean') fail(label + '.' + key + ' doit être booléen.');
+      if (style[key]) result[key] = true;
+    }
+  }
+  if (style.color !== undefined) {
+    if (typeof style.color !== 'string' || !/^#[0-9a-f]{6}$/i.test(style.color)) fail(label + '.color doit être une couleur hexadécimale.');
+    result.color = style.color.toLowerCase();
+  }
+  return result;
+}
+
 function validatePositionRef(position, label, gameIds, hasDefaultGame) {
   if (!position || typeof position !== 'object' || Array.isArray(position)) {
     fail(label + ' doit préciser une position.');
@@ -129,6 +154,8 @@ function normalizeCourse(course, gameIds, hasDefaultGame) {
         if (![2, 3, 4].includes(normalized.level)) fail(blockLabel + '.level doit valoir 2, 3 ou 4.');
       } else if (block.type === 'text') {
         normalized.text = requireText(block.text, blockLabel + '.text', 20000);
+        const style = normalizeTextStyle(block.style, blockLabel + '.style');
+        if (style && Object.keys(style).length) normalized.style = style;
       } else if (block.type === 'diagram') {
         normalized.position = validatePositionRef(block.position, blockLabel + '.position', gameIds, hasDefaultGame);
         if (block.caption !== undefined) normalized.caption = requireText(block.caption, blockLabel + '.caption', 1000);
