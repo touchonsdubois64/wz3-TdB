@@ -74,6 +74,8 @@ export function setupSettings({ button, menu }) {
   };
 
   function render() {
+    // Conserver le menu de notation déjà créé par app.js lorsqu'on reconstruit les réglages.
+    const existingNotationMenu = menu.querySelector('.notation-menu') || document.querySelector('.notation-menu');
     menu.innerHTML = '';
 
     const title = document.createElement('p');
@@ -185,8 +187,7 @@ export function setupSettings({ button, menu }) {
     notationTitle.className = 'settings-section';
     notationTitle.textContent = 'Type de notation';
     menu.appendChild(notationTitle);
-    const notationMenu = document.querySelector('.notation-menu');
-    if (notationMenu && notationMenu.parentElement !== menu) menu.appendChild(notationMenu);
+    if (existingNotationMenu) menu.appendChild(existingNotationMenu);
 
   }
 
