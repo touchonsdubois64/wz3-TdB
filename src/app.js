@@ -2511,6 +2511,10 @@ function openXpgnFile(file) {
 }
 
 function setupXpgnControls() {
+  window.addEventListener('xpgn:open-file', (event) => {
+    const file = event.detail && event.detail.file;
+    if (file) openXpgnFile(file);
+  });
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = '.xpgn,application/vnd.xpgn+json,application/json';
