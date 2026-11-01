@@ -209,7 +209,8 @@ export function setupSettings({ button, menu }) {
     }
   });
   document.addEventListener('click', (event) => {
-    if (!menu.hidden && !event.composedPath().includes(menu)) close();
+    const path = event.composedPath();
+    if (!menu.hidden && !path.includes(menu) && !path.includes(button)) close();
   });
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') close();
