@@ -125,6 +125,50 @@ const initStudioUi = () => {
     if (element) positionTools.appendChild(element);
   }
 
+  // Chargement direct d'un fichier PGN depuis l'ordinateur.
+  const pgnFileInput = document.createElement('input');
+  pgnFileInput.type = 'file';
+  pgnFileInput.accept = '.pgn,.txt,text/plain,application/x-chess-pgn';
+  pgnFileInput.hidden = true;
+  document.body.appendChild(pgnFileInput);
+  const browsePgn = document.createElement('button');
+  browsePgn.type = 'button';
+  browsePgn.className = 'studio-position-action';
+  browsePgn.innerHTML = '<span aria-hidden="true">📂</span> Naviguer — ouvrir un PGN';
+  browsePgn.addEventListener('click', () => pgnFileInput.click());
+  pgnFileInput.addEventListener('change', async () => {
+    const file = pgnFileInput.files && pgnFileInput.files[0];
+    if (!file) return;
+    const field = document.querySelector('#pgn');
+    field.value = (await file.text()).replace(/\\s+/g, ' ').trim();
+    field.dispatchEvent(new Event('change', { bubbles: true }));
+    window.setTimeout(closeDrawer, 220);
+    pgnFileInput.value = '';
+  });
+  positionTools.prepend(browsePgn);
+
+  // Raccourcis de préparation : FEN de départ standard et échiquier vide.
+  const presets = document.createElement('div');
+  presets.className = 'studio-position-presets';
+  const setFen = (value) => {
+    const field = document.querySelector('#fen');
+    field.value = value;
+    field.dispatchEvent(new Event('change', { bubbles: true }));
+    window.setTimeout(closeDrawer, 220);
+  };
+  for (const [label, fen, symbol] of [
+    ['Position initiale', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', '🚩'],
+    ['Échiquier vide', '8/8/8/8/8/8/8/8', '▦']
+  ]) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'studio-position-action studio-position-preset';
+    button.innerHTML = '<span aria-hidden="true">' + symbol + '</span> ' + label;
+    button.addEventListener('click', () => setFen(fen));
+    presets.appendChild(button);
+  }
+  positionTools.appendChild(presets);
+
   // Analyse et annotations graphiques : on déplace les éléments existants, sans les recréer.
   // Le panneau d'évaluation reste près de l'échiquier ; la palette graphique
   // est placée au-dessus de celui-ci par placeBlocks() dans app.js.
@@ -132,6 +176,17 @@ const initStudioUi = () => {
   const boardColumn = document.querySelector('.left');
   if (marksPanel && boardColumn && marksPanel.parentElement !== boardColumn) boardColumn.prepend(marksPanel);
   // La palette reste affichée au-dessus de l'échiquier : aucun bouton crayon séparé.
+
+  // Harmoniser visuellement les deux exports avec une flèche de téléchargement.
+  for (const button of panels.get('records').content.querySelectorAll('button')) {
+    if ((button.textContent || '').trim() === 'XPGN' && !button.querySelector('.studio-download-mark')) {
+      const mark = document.createElement('span');
+      mark.className = 'studio-download-mark';
+      mark.setAttribute('aria-hidden', 'true');
+      mark.textContent = '↓';
+      button.prepend(mark);
+    }
+  }
 
   // Les actions ont quitté leur ancienne ligne de notation.
   const notation = document.querySelector('.notation-control');
