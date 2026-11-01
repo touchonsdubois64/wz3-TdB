@@ -430,6 +430,17 @@
     width: 100%; min-width: 0;
   }
   .studio-position-tools .studio-position-presets button { min-width: 0; white-space: normal; }
+  .studio-position-tools .studio-position-browse {
+    width: 100%; min-height: 42px; justify-content: flex-start;
+    padding: 8px 12px; text-align: left;
+  }
+  .studio-position-tools .studio-position-browse svg {
+    width: 21px; height: 21px; flex: 0 0 21px;
+    fill: none; stroke: currentColor; stroke-width: 1.7;
+    stroke-linecap: round; stroke-linejoin: round;
+  }
+  .studio-position-tools .studio-position-browse span { overflow-wrap: anywhere; }
+
   .studio-position-tools .studio-position-preset img {
     display: block; width: 30px; height: 30px; flex: 0 0 30px;
     object-fit: contain;
