@@ -137,6 +137,8 @@ function normalizeCourse(course, gameIds, hasDefaultGame) {
   if (!Array.isArray(course.chapters) || course.chapters.length === 0) {
     fail('un cours doit contenir au moins un chapitre.');
   }
+  if (course.chapters.length > 200) fail('un cours ne peut pas dépasser 200 chapitres.');
+  let totalBlocks = 0;
   const chapterIds = new Set();
   const chapters = course.chapters.map((chapter, chapterIndex) => {
     const label = 'chapitre ' + chapterIndex;
@@ -146,6 +148,8 @@ function normalizeCourse(course, gameIds, hasDefaultGame) {
     chapterIds.add(id);
     const chapterTitle = requireText(chapter.title, label + '.title', 300);
     if (!Array.isArray(chapter.blocks) || chapter.blocks.length === 0) fail(label + ' doit contenir au moins un bloc.');
+    totalBlocks += chapter.blocks.length;
+    if (totalBlocks > 5000) fail('un cours ne peut pas dépasser 5000 blocs.');
     const blockIds = new Set();
     const blocks = chapter.blocks.map((block, blockIndex) => {
       const blockLabel = label + ', bloc ' + blockIndex;
