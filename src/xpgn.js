@@ -111,8 +111,22 @@ function validatePositionRef(position, label, gameIds, hasDefaultGame) {
   if (hasFen) {
     requireText(position.fen, label + '.fen', 200);
     const fields = position.fen.trim().split(/\s+/);
-    if (fields.length !== 6 || !/^[1-8\/PNBRQKpnbrqk]+$/.test(fields[0])) {
-      fail(label + '.fen ne ressemble pas à un FEN valide.');
+    const ranks = fields[0] ? fields[0].split('/') : [];
+    const validBoard = ranks.length === 8 && ranks.every((rank) => {
+      let squares = 0;
+      for (const token of rank) {
+        if (/[1-8]/.test(token)) squares += Number(token);
+        else if (/[PNBRQKpnbrqk]/.test(token)) squares += 1;
+        else return false;
+      }
+      return squares === 8;
+    });
+    const validCastling = fields[2] === '-' || (/^(?!.*(.).*\\1)[KQkq]+$/.test(fields[2]));
+    const validEnPassant = fields[3] === '-' || /^[a-h][36]$/.test(fields[3]);
+    if (fields.length !== 6 || !validBoard ||
+        !['w', 'b'].includes(fields[1]) || !validCastling || !validEnPassant ||
+        !/^\\d+$/.test(fields[4]) || !/^[1-9]\\d*$/.test(fields[5])) {
+      fail(label + '.fen ne respecte pas la structure FEN attendue.');
     }
     if (position.gameId !== undefined) {
       const gameId = requireText(position.gameId, label + '.gameId', 100);
@@ -121,6 +135,7 @@ function validatePositionRef(position, label, gameIds, hasDefaultGame) {
     }
     return { fen: position.fen.trim() };
   }
+  if (position.path.length > 1000) fail(label + '.path dépasse 1000 demi-coups.');
   if (!position.path.every((move) => typeof move === 'string' && UCI_MOVE.test(move))) {
     fail(label + '.path contient un coup UCI invalide.');
   }
