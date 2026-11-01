@@ -314,26 +314,6 @@ const initStudioUi = () => {
   });
   panels.get('records').content.appendChild(diagramButton);
 
-  // Un seul bouton de diagramme : le clic demande format et nom de fichier.
-  const diagramButton = panels.get('records').content.querySelector('.studio-diagram-download');
-  if (diagramButton) {
-    diagramButton.innerHTML = '<svg class="studio-board-mark" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19"/><path d="M8.83 2.5v19M15.16 2.5v19M2.5 8.83h19M2.5 15.16h19"/></svg><span>Télécharger le diagramme</span>';
-    diagramButton.addEventListener('click', async (event) => {
-      if (event.__diagramDialogHandled) return;
-      event.__diagramDialogHandled = true;
-      event.stopImmediatePropagation();
-      const format = window.prompt('Format du diagramme : png ou jpeg', 'png');
-      if (!format) return;
-      const normalized = format.trim().toLowerCase();
-      if (!['png', 'jpeg', 'jpg'].includes(normalized)) {
-        window.alert('Choisis PNG ou JPEG.');
-        return;
-      }
-      const name = window.prompt('Nom du fichier (sans extension)', 'diagramme-echecs');
-      if (name === null) return;
-      await exportDiagram(normalized === 'jpg' ? 'jpeg' : normalized, name.trim() || 'diagramme-echecs');
-    }, true);
-  }
   for (const button of panels.get('records').content.querySelectorAll('button')) {
     if ((button.textContent || '').trim() === 'XPGN' && !button.querySelector('.studio-download-mark')) {
       const mark = document.createElement('span');
