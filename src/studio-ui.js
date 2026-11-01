@@ -199,17 +199,23 @@ const initStudioUi = () => {
       return;
     }
     const glyphs = { K:'♔', Q:'♕', R:'♖', B:'♗', N:'♘', P:'♙', k:'♚', q:'♛', r:'♜', b:'♝', n:'♞', p:'♟' };
-    const board = rows.map(row => {
-      const squares = [];
-      for (const char of row) {
-        if (/^[1-8]$/.test(char)) for (let n = 0; n < Number(char); n++) squares.push('');
-        else if (glyphs[char]) squares.push(char);
-        else throw new Error('FEN invalide');
-      }
-      if (squares.length !== 8) throw new Error('FEN invalide');
-      return squares;
-    });
-    if (board.length !== 8) { window.alert('FEN invalide.'); return; }
+    let board;
+    try {
+      board = rows.map(row => {
+        const squares = [];
+        for (const char of row) {
+          if (/^[1-8]$/.test(char)) for (let n = 0; n < Number(char); n++) squares.push('');
+          else if (glyphs[char]) squares.push(char);
+          else throw new Error('FEN invalide');
+        }
+        if (squares.length !== 8) throw new Error('FEN invalide');
+        return squares;
+      });
+      if (board.length !== 8) throw new Error('FEN invalide');
+    } catch (error) {
+      window.alert('La position ne peut pas être exportée : FEN invalide.');
+      return;
+    }
     const canvas = document.createElement('canvas');
     const size = 960, square = size / 8;
     canvas.width = size; canvas.height = size;
@@ -236,7 +242,7 @@ const initStudioUi = () => {
       const link = document.createElement('a');
       link.href = url; link.download = 'diagramme-echecs.png';
       link.click();
-      URL.revokeObjectURL(url);
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     }, 'image/png');
   });
   panels.get('records').content.appendChild(diagramButton);
