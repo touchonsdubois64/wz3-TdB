@@ -18,7 +18,7 @@ const initStudioUi = () => {
   const icons = {
     info: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 10v7m0-10h.01"/></svg>',
     records: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3h14l3 3v15H3V4a1 1 0 0 1 1-1Z"/><path d="M7 3v6h10V3M7 21v-8h10v8"/></svg>',
-    settings: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6Z"/><path d="m19.4 13.5 1.1.9-1.6 2.8-1.4-.5a7.8 7.8 0 0 1-1.6.9l-.2 1.5h-3.3l-.2-1.5a7.8 7.8 0 0 1-1.6-.9l-1.4.5-1.6-2.8 1.1-.9a7 7 0 0 1 0-1.9l-1.1-.9 1.6-2.8 1.4.5a7.8 7.8 0 0 1 1.6-.9l.2-1.5h3.3l.2 1.5a7.8 7.8 0 0 1 1.6.9l1.4-.5 1.6 2.8-1.1.9a7 7 0 0 1 0 1.9Z"/></svg>',
+    settings: '<img src="./images/settings.svg" alt="" aria-hidden="true">',
     create: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.5h9l5 5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z"/><path d="M14 3.5V9h5M12 12v6m-3-3h6"/></svg>',
     position: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h18v18H3zM3 12h18M12 3v18"/><path d="M7 7h2v2H7zM15 15h2v2h-2z" fill="currentColor"/><path d="M17.5 5.5v5m-2.5-2.5h5"/></svg>',
     analysis: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18"/><path d="M8 4h8v7H8zM8 13h8v7H8z" fill="none"/><path d="M8 4h8v7H8z" fill="#171717"/><path d="M8 13h8v7H8z" fill="#fff"/></svg>',
@@ -95,10 +95,18 @@ const initStudioUi = () => {
   take('.notation-menu', 'settings');
 
   // Infos : rappel du fonctionnement de l'interface.
-  const infoText = document.createElement('p');
-  infoText.className = 'studio-info-text';
-  infoText.textContent = 'XPGN Studio permet de créer, charger, annoter et enregistrer des positions et des parties d’échecs. Utilisez Position pour importer un PGN, un XPGN ou une FEN, ou pour placer les pièces manuellement. Les outils d’annotation graphique se trouvent au-dessus de l’échiquier. L’analyse Stockfish et les zones d’évaluation restent accessibles dans cette colonne.';
-  panels.get('info').content.appendChild(infoText);
+  const infoDialog = document.createElement('dialog');
+  infoDialog.className = 'studio-info-dialog';
+  infoDialog.innerHTML = '<div class="studio-info-head"><h2>À propos de XPGN Studio</h2><button type="button" class="studio-info-close" aria-label="Fermer">×</button></div>' +
+    '<div class="studio-info-body"><p>XPGN Studio permet de créer, charger, examiner, annoter et enregistrer des positions et des parties d’échecs.</p>' +
+    '<p><strong>Infos :</strong> ouvre cette présentation. <strong>Réglages :</strong> personnalise le thème, l’apparence de l’échiquier, les couleurs des cases, la taille des coordonnées et le type de notation.</p>' +
+    '<p><strong>Enregistrements :</strong> donne accès aux fonctions d’export et de sauvegarde. <strong>Création :</strong> permet de créer un cours, d’ajouter des positions et du contenu pédagogique.</p>' +
+    '<p><strong>Position :</strong> permet de charger une partie ou une position au format PGN, XPGN ou FEN, ou de préparer une position en plaçant manuellement les figurines.</p>' +
+    '<p>La palette située au-dessus de l’échiquier sert aux annotations graphiques : couleurs, symboles, formes et flèches. Les commandes d’évaluation permettent de lancer l’analyse Stockfish et d’afficher les zones d’évaluation.</p>' +
+    '<p>Les coups de la partie apparaissent dans le panneau de droite. La navigation permet de parcourir les positions successives de la partie.</p></div>');
+  document.body.appendChild(infoDialog);
+  infoDialog.querySelector('.studio-info-close').addEventListener('click', () => infoDialog.close());
+  infoDialog.addEventListener('click', event => { if (event.target === infoDialog) infoDialog.close(); });
 
   // Création : le formulaire de cours déjà présent dans Studio.
   const actionButtons = [...document.querySelectorAll('.notation-control button')];
@@ -129,7 +137,15 @@ const initStudioUi = () => {
   if (notation) notation.hidden = true;
   controls.hidden = true;
 
+  const settingsButton = document.querySelector('#settings-btn');
+  const settingsMenu = document.querySelector('#settings-menu');
+  const closeSettings = () => {
+    if (settingsMenu) settingsMenu.hidden = true;
+    if (settingsButton) settingsButton.setAttribute('aria-expanded', 'false');
+  };
+
   function closeDrawer() {
+    closeSettings();
     activeCategory = null;
     drawer.hidden = true;
     positionTools.hidden = true;
@@ -141,10 +157,16 @@ const initStudioUi = () => {
   }
 
   function openCategory(id) {
+    if (id === 'info') {
+      closeDrawer();
+      if (!infoDialog.open) infoDialog.showModal();
+      return;
+    }
     if (activeCategory === id) {
       closeDrawer();
       return;
     }
+    closeSettings();
     activeCategory = id;
     const isPosition = id === 'position';
     drawer.hidden = isPosition;
@@ -155,6 +177,7 @@ const initStudioUi = () => {
       button.setAttribute('aria-expanded', selected ? 'true' : 'false');
       panels.get(key).panel.hidden = !selected;
     }
+    if (id === 'settings' && settingsButton && settingsMenu && settingsMenu.hidden) settingsButton.click();
   }
 
   for (const [id, button] of buttons) button.addEventListener('click', () => openCategory(id));
