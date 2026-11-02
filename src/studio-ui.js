@@ -191,7 +191,7 @@ const initStudioUi = () => {
     button.type = 'button';
     button.className = 'studio-position-action studio-position-preset';
     const image = document.createElement('img');
-    image.src = new URL((import.meta.env.DEV ? './docs/images/' : './docs/images/') + icon, document.baseURI).href;
+    image.src = new URL((import.meta.env.DEV ? 'docs/images/' : 'images/') + icon, document.baseURI).href;
     image.alt = '';
     image.setAttribute('aria-hidden', 'true');
     button.append(image);
