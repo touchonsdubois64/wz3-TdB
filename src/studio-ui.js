@@ -188,7 +188,9 @@ const initStudioUi = () => {
     button.type = 'button';
     button.className = 'studio-position-action studio-position-preset';
     const image = document.createElement('img');
-    image.src = new URL((import.meta.env.DEV ? 'docs/images/' : 'images/') + icon, document.baseURI).href;
+    // Les SVG sont servis depuis le dossier public « images » en dev comme en production.
+    // Utiliser une URL relative à la racine du site (base GitHub Pages incluse).
+    image.src = new URL('images/' + icon, import.meta.env.BASE_URL ? new URL(import.meta.env.BASE_URL, document.baseURI) : document.baseURI).href;
     image.alt = '';
     image.setAttribute('aria-hidden', 'true');
     button.append(image);
