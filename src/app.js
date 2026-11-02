@@ -756,7 +756,7 @@ setupLibrary({
 // ==================================================
 //
 // Le texte est lu avec ses variantes ; il s'ouvre en mode analyse.
-// Avec un en-tête [FEN] on affiche la position de départ, sinon la fin de la partie.
+// À l'import, afficher la position initiale ; les coups restent consultables dans la notation.
 // ==================================================
 
 let lastPgn = '';
@@ -791,7 +791,20 @@ function loadPgn(raw, options = {}) {
   currentStartFen = result.startFen;
   rootNode = result.root;
   suspended = null;
-  const target = result.hasFen ? result.root : result.endNode;
+
+  // À l'ouverture d'un PGN, conserver toutes les variantes dans l'arbre,
+  // mais replier chaque branche secondaire pour ne pas encombrer la notation.
+  const collapseSecondaryBranches = (parent) => {
+    if (!parent || !Array.isArray(parent.children)) return;
+    parent.children.forEach((child, index) => {
+      if (index > 0) child.collapsed = true;
+      collapseSecondaryBranches(child);
+    });
+  };
+  collapseSecondaryBranches(rootNode);
+
+  // L'échiquier démarre toujours sur la position initiale, avec ou sans en-tête FEN.
+  const target = result.root;
   if (!rebuildGameToNode(target)) {
     showMessage('Impossible d’afficher cette position.', 'error', pgnMessage);
     return false;
@@ -809,7 +822,7 @@ function loadPgn(raw, options = {}) {
   afterPosition();
 
   if (result.error) showMessage(result.error + ' Les coups précédents sont affichés.', 'error', pgnMessage);
-  else showMessage(result.moveCount + (result.moveCount > 1 ? ' coups lus' : ' coup lu') + (result.hasFen ? ' (position de départ affichée)' : ' (fin de partie affichée)'), 'info', pgnMessage);
+  else showMessage(result.moveCount + (result.moveCount > 1 ? ' coups lus' : ' coup lu') + ' (position initiale affichée ; variantes secondaires repliées)', 'info', pgnMessage);
   return true;
 }
 
