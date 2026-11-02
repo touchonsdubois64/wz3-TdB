@@ -816,3 +816,36 @@
 }
 .studio-diagram-actions button[type="submit"] { background: var(--accent); color: white; border-color: var(--accent); }
 .studio-diagram-download .studio-download-icon { width: 22px; height: 22px; object-fit: contain; }
+
+
+/* Édition directe des commentaires du PGN sélectionné. */
+.xpgn-move-text-panel {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border, #cbd1d8);
+  border-radius: 8px;
+  background: var(--panel, #f7f8fa);
+}
+.xpgn-move-text-panel label {
+  font-size: .82rem;
+  font-weight: 600;
+  color: var(--text, #303844);
+}
+.xpgn-move-text-panel textarea {
+  display: block;
+  width: 100%;
+  min-height: 72px;
+  box-sizing: border-box;
+  resize: vertical;
+  padding: 8px 10px;
+  border: 1px solid var(--border, #cbd1d8);
+  border-radius: 6px;
+  background: var(--surface, #fff);
+  color: var(--text, #20252b);
+  font: inherit;
+  font-size: .9rem;
+  line-height: 1.45;
+}
+.xpgn-move-text-panel textarea:focus { outline: 2px solid var(--accent, #4678b8); outline-offset: 1px; }
