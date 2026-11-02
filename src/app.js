@@ -2261,6 +2261,14 @@ function centerCurrentMove() {
 }
 
 function updateMoves() {
+  const moveTextEditor = document.querySelector('#xpgn-move-text-editor');
+  if (moveTextEditor && document.activeElement !== moveTextEditor) {
+    moveTextEditor.value = currentNode && currentNode.note ? currentNode.note : '';
+    const label = document.querySelector('#xpgn-move-text-label');
+    if (label) label.textContent = currentNode === rootNode
+      ? 'Texte de la position initiale'
+      : (currentNode && currentNode.move ? 'Commentaire après ' + currentNode.move.san : 'Commentaire du coup sélectionné');
+  }
   movesElement.innerHTML = '';
   movesElement.classList.toggle('suspended', !locked && Boolean(rootNode));
   if (rootNode && rootNode.note) {
@@ -2777,6 +2785,22 @@ function showCourseReader(chapterIndex = 0) {
 }
 function setupMoveAnnotations() {
   let annotationTargetNode = null;
+
+  // Éditeur direct du commentaire PGN associé à la position/coup sélectionné.
+  // Le texte est stocké dans node.note, donc réexporté dans le PGN entre accolades.
+  const moveTextPanel = document.createElement('section');
+  moveTextPanel.className = 'xpgn-move-text-panel';
+  moveTextPanel.innerHTML = '<label id="xpgn-move-text-label" for="xpgn-move-text-editor">Commentaire du coup sélectionné</label>' +
+    '<textarea id="xpgn-move-text-editor" rows="3" maxlength="20000" placeholder="Saisissez ou modifiez le commentaire PGN associé à ce coup…"></textarea>';
+  const movesFrame = document.querySelector('#frame-right');
+  if (movesFrame) movesFrame.insertBefore(moveTextPanel, movesElement);
+  const moveTextEditor = moveTextPanel.querySelector('textarea');
+  moveTextEditor.addEventListener('input', () => {
+    if (!currentNode) return;
+    currentNode.note = moveTextEditor.value;
+    // La liste est rafraîchie sans toucher au champ en cours d’édition.
+    updateMoves();
+  });
   const add = (label, title, action) => {
     const button = document.createElement('button');
     button.type = 'button';
