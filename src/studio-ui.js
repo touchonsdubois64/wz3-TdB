@@ -160,11 +160,8 @@ const initStudioUi = () => {
       }
       const raw = await file.text();
       if (!raw.trim()) { window.alert('Le fichier PGN est vide.'); return; }
-      const field = document.querySelector('#pgn');
-      field.value = raw.trim();
-      // Forcer le traitement du fichier même si le texte correspond au dernier PGN collé.
-      field.dispatchEvent(new Event('input', { bubbles: true }));
-      field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      // L’application traite directement le contenu, sans simuler input/Enter.
+      window.dispatchEvent(new CustomEvent('xpgn:import-pgn', { detail: { text: raw } }));
       window.setTimeout(closeDrawer, 220);
     } catch (error) {
       window.alert('Impossible de lire ce fichier PGN : ' + (error && error.message ? error.message : 'erreur de lecture'));
