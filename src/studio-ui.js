@@ -322,12 +322,14 @@ const initStudioUi = () => {
     if (diagramStyle === 'diag') {
       const container = document.querySelector('#board cg-container');
       const background = container ? getComputedStyle(container).backgroundImage : '';
-      const match = /^url\(["']?(.*?)["']?\)$/.exec(background);
+      // Le fond CSS est une URL data:SVG dont le contenu comporte lui-même des
+      // parenthèses. Une capture non gloutonne tronquait l'URL avant sa fin.
+      const match = /^url\(["']?(.*)["']?\)$/.exec(background);
       if (match && match[1]) {
         await new Promise(resolve => {
           const pattern = new Image();
           pattern.onload = () => { ctx.drawImage(pattern, margin, margin, size, size); resolve(); };
-          pattern.onerror = resolve;
+          pattern.onerror = () => resolve();
           pattern.src = match[1];
         });
       }
@@ -340,10 +342,12 @@ const initStudioUi = () => {
         const rank = blackOrientation ? 7 - displayRank : displayRank;
         const file = blackOrientation ? 7 - displayFile : displayFile;
         const isDark = (displayRank + displayFile) % 2 === 1;
-        ctx.fillStyle = diagramStyle === 'diag' ? '#fff' : (isDark ? dark : light);
-        ctx.fillRect(margin + displayFile * square, margin + displayRank * square, square, square);
-        // En mode diagramme, le motif SVG de l'interface est dessiné une seule fois
-        // sur l'échiquier entier : même angle, densité et raccords que l'original.
+        // Le motif du mode « diagramme » a déjà été peint sur l'échiquier entier.
+        // Ne pas recouvrir ensuite chacune de ses cases avec un aplat blanc.
+        if (diagramStyle !== 'diag') {
+          ctx.fillStyle = isDark ? dark : light;
+          ctx.fillRect(margin + displayFile * square, margin + displayRank * square, square, square);
+        }
 
         const piece = board[rank][file];
         if (!piece) continue;
