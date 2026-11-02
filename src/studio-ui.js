@@ -281,14 +281,32 @@ const initStudioUi = () => {
     // Fond blanc et marge extérieure pour les coordonnées, y compris en JPEG.
     ctx.fillStyle = '#fff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Reprendre les dimensions typographiques et les espacements réellement affichés à l'écran.
+    const boardElement = document.querySelector('#board');
+    const boardRect = boardElement ? boardElement.getBoundingClientRect() : null;
+    const boardScale = boardRect && boardRect.width ? size / boardRect.width : 1;
+    const rankLabels = document.querySelector('.rank-labels');
+    const fileLabels = document.querySelector('.file-labels');
+    const rankSample = rankLabels && rankLabels.querySelector('span');
+    const fileSample = fileLabels && fileLabels.querySelector('span');
+    const rankStyle = rankSample ? getComputedStyle(rankSample) : null;
+    const fileStyle = fileSample ? getComputedStyle(fileSample) : rankStyle;
+    const rankFont = rankStyle ? parseFloat(rankStyle.fontSize) * boardScale : 16;
+    const fileFont = fileStyle ? parseFloat(fileStyle.fontSize) * boardScale : rankFont;
+    const rankRect = rankLabels ? rankLabels.getBoundingClientRect() : null;
+    const fileRect = fileLabels ? fileLabels.getBoundingClientRect() : null;
+    const rankGap = rankRect && boardRect ? (boardRect.left - rankRect.left) * boardScale : 30;
+    const fileGap = fileRect && boardRect ? (fileRect.top - (boardRect.top + boardRect.height)) * boardScale : 12;
+    const rankPad = rankRect && boardRect ? rankGap : 30;
     ctx.fillStyle = '#222';
-    ctx.font = 'bold 16px Arial, sans-serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     for (let index = 0; index < 8; index++) {
       const file = blackOrientation ? 7 - index : index;
       const rank = blackOrientation ? index + 1 : 8 - index;
-      ctx.fillText('abcdefgh'[file], margin + index * square + square / 2, margin + size + 42);
-      ctx.fillText(String(rank), margin - 30, margin + index * square + square / 2);
+      ctx.font = 'bold ' + fileFont + 'px ' + (fileStyle?.fontFamily || 'Arial, sans-serif');
+      ctx.fillText('abcdefgh'[file], margin + index * square + square / 2, margin + size + fileGap + fileFont * .65);
+      ctx.font = 'bold ' + rankFont + 'px ' + (rankStyle?.fontFamily || 'Arial, sans-serif');
+      ctx.fillText(String(rank), margin - rankPad / 2, margin + index * square + square / 2);
     }
     const imageCache = new Map();
     const loadPiece = (piece) => {
@@ -304,6 +322,19 @@ const initStudioUi = () => {
       imageCache.set(piece, promise);
       return promise;
     };
+    if (diagramStyle === 'diag') {
+      const container = document.querySelector('#board cg-container');
+      const background = container ? getComputedStyle(container).backgroundImage : '';
+      const match = /^url\(["']?(.*?)["']?\)$/.exec(background);
+      if (match && match[1]) {
+        await new Promise(resolve => {
+          const pattern = new Image();
+          pattern.onload = () => { ctx.drawImage(pattern, margin, margin, size, size); resolve(); };
+          pattern.onerror = resolve;
+          pattern.src = match[1];
+        });
+      }
+    }
     const pieces = [...new Set(board.flat().filter(Boolean))];
     const loaded = await Promise.all(pieces.map(async piece => [piece, await loadPiece(piece)]));
     const pieceImages = new Map(loaded);
@@ -314,20 +345,9 @@ const initStudioUi = () => {
         const isDark = (displayRank + displayFile) % 2 === 1;
         ctx.fillStyle = diagramStyle === 'diag' ? '#fff' : (isDark ? dark : light);
         ctx.fillRect(margin + displayFile * square, margin + displayRank * square, square, square);
-        if (diagramStyle === 'diag' && isDark) {
-          ctx.save();
-          ctx.beginPath();
-          ctx.rect(margin + displayFile * square, margin + displayRank * square, square, square);
-          ctx.clip();
-          ctx.strokeStyle = '#999'; ctx.lineWidth = 2;
-          for (let hatch = -square; hatch < square * 2; hatch += 13) {
-            ctx.beginPath();
-            ctx.moveTo(margin + displayFile * square + hatch, margin + displayRank * square + square);
-            ctx.lineTo(margin + displayFile * square + hatch + square, margin + displayRank * square);
-            ctx.stroke();
-          }
-          ctx.restore();
-        }
+        // En mode diagramme, le motif SVG de l'interface est dessiné une seule fois
+        // sur l'échiquier entier : même angle, densité et raccords que l'original.
+
         const piece = board[rank][file];
         if (!piece) continue;
         const image = pieceImages.get(piece);
@@ -343,8 +363,8 @@ const initStudioUi = () => {
     }
     // Contour extérieur de l'échiquier, identique au cadre visuel.
     ctx.save();
-    ctx.strokeStyle = '#333';
-    ctx.lineWidth = frame;
+    ctx.strokeStyle = diagramStyle === 'diag' ? '#000' : '#333';
+    ctx.lineWidth = diagramStyle === 'diag' ? 4 : frame;
     ctx.strokeRect(margin - frame / 2, margin - frame / 2, size + frame, size + frame);
     ctx.restore();
 
