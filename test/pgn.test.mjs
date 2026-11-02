@@ -91,7 +91,7 @@ test('PGN sur une seule ligne, en-têtes compris', () => {
 });
 
 test('PGN UTF-8 avec BOM avant les en-têtes', () => {
-  const r = parsePgn('\\uFEFF[Event "BOM"]\\r\\n\\r\\n1. e4 e5 2. Nf3 *', Chess);
+  const r = parsePgn('\uFEFF[Event "BOM"]\r\n\r\n1. e4 e5 2. Nf3 *', Chess);
   assert.equal(r.error, null);
   assert.equal(r.title, 'BOM');
   assert.equal(r.moveCount, 3);
