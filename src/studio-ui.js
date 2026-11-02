@@ -120,7 +120,7 @@ const initStudioUi = () => {
 
   // Position : bibliothèque, chargement PGN/FEN et montage manuel.
   // Conserver les champs et la palette de montage ; les commandes de jeu, de trait et d'indices restent hors de ce panneau.
-  for (const selector of ['.cell-library', '.cell-pgn', '.cell-fen', '.cell-palette', '.cell-play', '.cell-start', '.cell-hints']) {
+  for (const selector of ['.cell-library', '.cell-pgn', '.cell-fen', '.cell-palette']) {
     const element = document.querySelector(selector);
     if (element) positionTools.appendChild(element);
   }
@@ -199,15 +199,16 @@ const initStudioUi = () => {
     presets.appendChild(button);
   }
   positionTools.appendChild(presets);
-  // Ordre demandé : naviguer, répertoire, PGN, FEN, raccourcis, puis palette.
+  // Ordre conforme à la référence : deux dossiers, PGN, FEN, raccourcis, palette.
   const libraryCell = positionTools.querySelector('.cell-library');
   const pgnCell = positionTools.querySelector('.cell-pgn');
   const fenCell = positionTools.querySelector('.cell-fen');
   const paletteCell = positionTools.querySelector('.cell-palette');
-  positionTools.append(browsePgn, ...(libraryCell ? [libraryCell] : []),
-    ...(pgnCell ? [pgnCell] : []), ...(fenCell ? [fenCell] : []), presets,
-    ...(paletteCell ? [paletteCell] : []),
-    ...['.cell-play', '.cell-start', '.cell-hints'].map(selector => positionTools.querySelector(selector)).filter(Boolean));
+  const fileActions = document.createElement('div');
+  fileActions.className = 'studio-position-file-actions';
+  fileActions.append(browsePgn, ...(libraryCell ? [libraryCell] : []));
+  positionTools.replaceChildren(fileActions, ...(pgnCell ? [pgnCell] : []),
+    ...(fenCell ? [fenCell] : []), presets, ...(paletteCell ? [paletteCell] : []));
 
   // Analyse et annotations graphiques : on déplace les éléments existants, sans les recréer.
   // Le panneau d'évaluation reste près de l'échiquier ; la palette graphique
