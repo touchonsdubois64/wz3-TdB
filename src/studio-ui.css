@@ -785,3 +785,34 @@
   .studio-position-tools > .cell-start,
   .studio-position-tools > .cell-hints { display: none !important; }
 }
+
+
+/* Dialogue d'export du diagramme : nom et format dans une seule fenêtre. */
+.studio-diagram-dialog {
+  width: min(420px, calc(100vw - 32px));
+  max-width: 420px;
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--edge);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: 0 16px 48px rgba(0,0,0,.28);
+}
+.studio-diagram-dialog::backdrop { background: rgba(0,0,0,.45); }
+.studio-diagram-form { display: grid; gap: 14px; padding: 20px; }
+.studio-diagram-form h2 { margin: 0; font-size: 1.15rem; }
+.studio-diagram-form label { display: grid; gap: 6px; font-size: .92rem; }
+.studio-diagram-form input,
+.studio-diagram-form select {
+  width: 100%; min-width: 0; box-sizing: border-box; padding: 9px 10px;
+  border: 1px solid var(--edge); border-radius: 6px;
+  background: var(--surface); color: var(--ink); font: inherit;
+}
+.studio-diagram-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+.studio-diagram-actions button {
+  min-height: 36px; padding: 7px 12px; border: 1px solid var(--edge);
+  border-radius: 6px; background: var(--panel); color: var(--ink); cursor: pointer;
+}
+.studio-diagram-actions button[type="submit"] { background: var(--accent); color: white; border-color: var(--accent); }
+.studio-diagram-download .studio-download-icon { width: 22px; height: 22px; object-fit: contain; }
