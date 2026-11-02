@@ -90,6 +90,14 @@ test('PGN sur une seule ligne, en-têtes compris', () => {
   assert.equal(r.title, 'Une ligne');
 });
 
+test('PGN UTF-8 avec BOM avant les en-têtes', () => {
+  const r = parsePgn('\\uFEFF[Event "BOM"]\\r\\n\\r\\n1. e4 e5 2. Nf3 *', Chess);
+  assert.equal(r.error, null);
+  assert.equal(r.title, 'BOM');
+  assert.equal(r.moveCount, 3);
+  assert.deepEqual(line(r.root), ['e4', 'e5', 'Nf3']);
+});
+
 test('deux parties sur une seule ligne : la première seulement', () => {
   const r = parsePgn('[Event "A"] 1. e4 e5 * [Event "B"] 1. d4 d5 *', Chess);
   assert.equal(r.moveCount, 2);
