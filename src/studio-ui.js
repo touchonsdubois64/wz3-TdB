@@ -162,7 +162,9 @@ const initStudioUi = () => {
       if (!raw.trim()) { window.alert('Le fichier PGN est vide.'); return; }
       const field = document.querySelector('#pgn');
       field.value = raw.trim();
-      field.dispatchEvent(new Event('change', { bubbles: true }));
+      // Forcer le traitement du fichier même si le texte correspond au dernier PGN collé.
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+      field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
       window.setTimeout(closeDrawer, 220);
     } catch (error) {
       window.alert('Impossible de lire ce fichier PGN : ' + (error && error.message ? error.message : 'erreur de lecture'));
@@ -189,7 +191,7 @@ const initStudioUi = () => {
     button.type = 'button';
     button.className = 'studio-position-action studio-position-preset';
     const image = document.createElement('img');
-    image.src = new URL((import.meta.env.DEV ? 'docs/images/' : 'images/') + icon, document.baseURI).href;
+    image.src = new URL((import.meta.env.DEV ? './docs/images/' : './docs/images/') + icon, document.baseURI).href;
     image.alt = '';
     image.setAttribute('aria-hidden', 'true');
     button.append(image);
@@ -267,7 +269,7 @@ const initStudioUi = () => {
     }
 
     const canvas = document.createElement('canvas');
-    const size = 960, square = size / 8, margin = 44;
+    const size = 960, square = size / 8, margin = 72, frame = 5;
     canvas.width = size + margin * 2; canvas.height = size + margin * 2;
     const ctx = canvas.getContext('2d');
     if (!ctx) { window.alert('La création de l’image a échoué.'); return; }
@@ -280,13 +282,13 @@ const initStudioUi = () => {
     ctx.fillStyle = '#fff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#222';
-    ctx.font = 'bold 22px Arial, sans-serif';
+    ctx.font = 'bold 16px Arial, sans-serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     for (let index = 0; index < 8; index++) {
       const file = blackOrientation ? 7 - index : index;
       const rank = blackOrientation ? index + 1 : 8 - index;
-      ctx.fillText('abcdefgh'[file], margin + index * square + square / 2, margin + size + 23);
-      ctx.fillText(String(rank), 22, margin + index * square + square / 2);
+      ctx.fillText('abcdefgh'[file], margin + index * square + square / 2, margin + size + 42);
+      ctx.fillText(String(rank), margin - 30, margin + index * square + square / 2);
     }
     const imageCache = new Map();
     const loadPiece = (piece) => {
@@ -318,10 +320,10 @@ const initStudioUi = () => {
           ctx.rect(margin + displayFile * square, margin + displayRank * square, square, square);
           ctx.clip();
           ctx.strokeStyle = '#999'; ctx.lineWidth = 2;
-          for (let hatch = -square; hatch < square * 2; hatch += 18) {
+          for (let hatch = -square; hatch < square * 2; hatch += 13) {
             ctx.beginPath();
-            ctx.moveTo(margin + displayFile * square + hatch, margin + displayRank * square);
-            ctx.lineTo(margin + displayFile * square + hatch + square, margin + displayRank * square + square);
+            ctx.moveTo(margin + displayFile * square + hatch, margin + displayRank * square + square);
+            ctx.lineTo(margin + displayFile * square + hatch + square, margin + displayRank * square);
             ctx.stroke();
           }
           ctx.restore();
@@ -339,6 +341,13 @@ const initStudioUi = () => {
         }
       }
     }
+    // Contour extérieur de l'échiquier, identique au cadre visuel.
+    ctx.save();
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = frame;
+    ctx.strokeRect(margin - frame / 2, margin - frame / 2, size + frame, size + frame);
+    ctx.restore();
+
     // Superposer les annotations graphiques dessinées dans la couche SVG de l'échiquier.
     const marksSvg = document.querySelector('#marks-layer svg');
     if (marksSvg) {
