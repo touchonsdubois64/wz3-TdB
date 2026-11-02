@@ -1,3 +1,6 @@
+import startingPositionIcon from '../docs/images/starting-position.svg';
+import emptyBoardIcon from '../docs/images/empty-board.svg';
+
 // ==================================================
 // XPGN STUDIO — nouvelle barre d’outils contextuelle
 // Couche d’interface isolée : les fonctions existantes restent inchangées.
@@ -181,16 +184,15 @@ const initStudioUi = () => {
     window.setTimeout(closeDrawer, 220);
   };
   for (const [label, fen, icon] of [
-    ['Position initiale', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', 'starting-position.svg'],
-    ['Échiquier vide', '8/8/8/8/8/8/8/8 w - - 0 1', 'empty-board.svg']
+    ['Position initiale', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', startingPositionIcon],
+    ['Échiquier vide', '8/8/8/8/8/8/8/8 w - - 0 1', emptyBoardIcon]
   ]) {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'studio-position-action studio-position-preset';
     const image = document.createElement('img');
-    // Les SVG sont servis depuis le dossier public « images » en dev comme en production.
-    // Utiliser une URL relative à la racine du site (base GitHub Pages incluse).
-    image.src = new URL('images/' + icon, import.meta.env.BASE_URL ? new URL(import.meta.env.BASE_URL, document.baseURI) : document.baseURI).href;
+    // Import Vite statique : le bon fichier est intégré au build et son URL est réécrite automatiquement.
+    image.src = icon;
     image.alt = '';
     image.setAttribute('aria-hidden', 'true');
     button.append(image);
