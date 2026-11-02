@@ -813,6 +813,18 @@ function loadPgn(raw, options = {}) {
   return true;
 }
 
+// Import explicite depuis le sélecteur de fichiers : évite de simuler une saisie clavier.
+window.addEventListener('xpgn:import-pgn', (event) => {
+  const raw = event.detail && event.detail.text;
+  if (typeof raw !== 'string' || !raw.trim()) {
+    showMessage('Le fichier PGN est vide.', 'error', pgnMessage);
+    return;
+  }
+  pgnInput.value = raw.trim();
+  lastPgn = pgnInput.value;
+  loadPgn(raw, { strict: true });
+});
+
 pgnInput.addEventListener('paste', (event) => {
   const raw = event.clipboardData ? event.clipboardData.getData('text') : '';
   if (!raw) return;
