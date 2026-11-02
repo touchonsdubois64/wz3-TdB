@@ -1,5 +1,5 @@
-import startingPositionIcon from '../docs/images/starting-position.svg';
-import emptyBoardIcon from '../docs/images/empty-board.svg';
+import startingPositionIcon from './assets/starting-position.svg';
+import emptyBoardIcon from './assets/empty-board.svg';
 
 // ==================================================
 // XPGN STUDIO — nouvelle barre d’outils contextuelle
