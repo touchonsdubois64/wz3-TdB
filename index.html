@@ -37,14 +37,26 @@
     </div>
 
     <div class="cell-pgn">
-      <label for="pgn" class="label">PGN :</label>
+      <button type="button" id="pgn-open" class="label label-link" title="Ouvrir un fichier PGN de cet ordinateur">PGN :</button>
+      <input id="pgn-file" type="file" accept=".pgn,.txt,text/plain,application/x-chess-pgn,application/vnd.chess-pgn" hidden>
       <input id="pgn" class="text-field" type="text" spellcheck="false" autocomplete="off" autocapitalize="off"
              placeholder="1. e4 e5 2. Nf3 Nc6 3. Bb5 a6" aria-label="Texte PGN">
       <div id="pgn-message" class="message" role="status" aria-live="polite"></div>
     </div>
 
     <div class="cell-fen">
-      <label for="fen" class="label">FEN :</label>
+      <button type="button" id="fen-menu-btn" class="label label-link" aria-haspopup="true" aria-expanded="false"
+              title="Charger la position de départ des parties, ou vider l’échiquier">FEN :</button>
+      <div id="fen-menu" class="fen-menu" role="menu" hidden>
+        <button type="button" id="fen-start" class="fen-menu-item" role="menuitem">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 22V3" stroke="#4a3a2c" stroke-width="2" stroke-linecap="round"/><g fill="#1b1b1b"><rect x="6" y="3.5" width="3.5" height="3.5"/><rect x="13" y="3.5" width="3.5" height="3.5"/><rect x="9.5" y="7" width="3.5" height="3.5"/><rect x="16.5" y="7" width="3.5" height="3.5"/><rect x="6" y="10.5" width="3.5" height="3.5"/><rect x="13" y="10.5" width="3.5" height="3.5"/></g><rect x="6" y="3.5" width="14" height="10.5" fill="none" stroke="#1b1b1b" stroke-width="1"/></svg>
+          <span>Position de départ</span>
+        </button>
+        <button type="button" id="fen-empty" class="fen-menu-item" role="menuitem">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><g fill="#b9ab94"><rect x="5" y="5" width="3.5" height="3.5"/><rect x="12" y="5" width="3.5" height="3.5"/><rect x="8.5" y="8.5" width="3.5" height="3.5"/><rect x="15.5" y="8.5" width="3.5" height="3.5"/><rect x="5" y="12" width="3.5" height="3.5"/><rect x="12" y="12" width="3.5" height="3.5"/><rect x="8.5" y="15.5" width="3.5" height="3.5"/><rect x="15.5" y="15.5" width="3.5" height="3.5"/></g><rect x="5" y="5" width="14" height="14" fill="none" stroke="#4a3a2c" stroke-width="1.2"/></svg>
+          <span>Échiquier vide</span>
+        </button>
+      </div>
       <input id="fen" class="text-field" type="text" spellcheck="false" autocomplete="off" autocapitalize="off"
              placeholder="8/8/8/8/8/8/8/8 w - - 0 1" aria-label="Code FEN">
       <div id="message" class="message" role="status" aria-live="polite"></div>
