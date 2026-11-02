@@ -267,15 +267,27 @@ const initStudioUi = () => {
     }
 
     const canvas = document.createElement('canvas');
-    const size = 960, square = size / 8;
-    canvas.width = size; canvas.height = size;
+    const size = 960, square = size / 8, margin = 44;
+    canvas.width = size + margin * 2; canvas.height = size + margin * 2;
     const ctx = canvas.getContext('2d');
     if (!ctx) { window.alert('La création de l’image a échoué.'); return; }
-    const boardStyle = document.querySelector('#board cg-board');
     const rootStyle = getComputedStyle(document.documentElement);
     const light = rootStyle.getPropertyValue('--board-light').trim() || '#f0d9b5';
     const dark = rootStyle.getPropertyValue('--board-dark').trim() || '#b58863';
     const blackOrientation = Boolean(document.querySelector('#board .orientation-black'));
+    const diagramStyle = document.documentElement.getAttribute('data-board');
+    // Fond blanc et marge extérieure pour les coordonnées, y compris en JPEG.
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#222';
+    ctx.font = 'bold 22px Arial, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    for (let index = 0; index < 8; index++) {
+      const file = blackOrientation ? 7 - index : index;
+      const rank = blackOrientation ? index + 1 : 8 - index;
+      ctx.fillText('abcdefgh'[file], margin + index * square + square / 2, margin + size + 23);
+      ctx.fillText(String(rank), 22, margin + index * square + square / 2);
+    }
     const imageCache = new Map();
     const loadPiece = (piece) => {
       if (imageCache.has(piece)) return imageCache.get(piece);
@@ -297,21 +309,57 @@ const initStudioUi = () => {
       for (let displayFile = 0; displayFile < 8; displayFile++) {
         const rank = blackOrientation ? 7 - displayRank : displayRank;
         const file = blackOrientation ? 7 - displayFile : displayFile;
-        ctx.fillStyle = (displayRank + displayFile) % 2 ? dark : light;
-        ctx.fillRect(displayFile * square, displayRank * square, square, square);
+        const isDark = (displayRank + displayFile) % 2 === 1;
+        ctx.fillStyle = diagramStyle === 'diag' ? '#fff' : (isDark ? dark : light);
+        ctx.fillRect(margin + displayFile * square, margin + displayRank * square, square, square);
+        if (diagramStyle === 'diag' && isDark) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(margin + displayFile * square, margin + displayRank * square, square, square);
+          ctx.clip();
+          ctx.strokeStyle = '#999'; ctx.lineWidth = 2;
+          for (let hatch = -square; hatch < square * 2; hatch += 18) {
+            ctx.beginPath();
+            ctx.moveTo(margin + displayFile * square + hatch, margin + displayRank * square);
+            ctx.lineTo(margin + displayFile * square + hatch + square, margin + displayRank * square + square);
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
         const piece = board[rank][file];
         if (!piece) continue;
         const image = pieceImages.get(piece);
         if (image) {
-          ctx.drawImage(image, displayFile * square + 5, displayRank * square + 5, square - 10, square - 10);
+          ctx.drawImage(image, margin + displayFile * square + 5, margin + displayRank * square + 5, square - 10, square - 10);
         } else {
           ctx.font = '104px "DejaVu Sans", "Segoe UI Symbol", serif';
           ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
           ctx.fillStyle = piece === piece.toUpperCase() ? '#fff' : '#171717';
-          ctx.fillText(glyphs[piece], displayFile * square + square / 2, displayRank * square + square / 2 + 5);
+          ctx.fillText(glyphs[piece], margin + displayFile * square + square / 2, margin + displayRank * square + square / 2 + 5);
         }
       }
     }
+    // Superposer les annotations graphiques dessinées dans la couche SVG de l'échiquier.
+    const marksSvg = document.querySelector('#marks-layer svg');
+    if (marksSvg) {
+      try {
+        const serialized = new XMLSerializer().serializeToString(marksSvg);
+        const overlayUrl = URL.createObjectURL(new Blob([serialized], { type: 'image/svg+xml;charset=utf-8' }));
+        await new Promise(resolve => {
+          const overlay = new Image();
+          overlay.onload = () => {
+            ctx.drawImage(overlay, margin, margin, size, size);
+            URL.revokeObjectURL(overlayUrl);
+            resolve();
+          };
+          overlay.onerror = () => { URL.revokeObjectURL(overlayUrl); resolve(); };
+          overlay.src = overlayUrl;
+        });
+      } catch (error) {
+        // L'export du diagramme reste disponible même si une annotation ne peut être rasterisée.
+      }
+    }
+
     const mime = format === 'jpeg' ? 'image/jpeg' : 'image/png';
     const extension = format === 'jpeg' ? 'jpg' : 'png';
     canvas.toBlob(blob => {
