@@ -120,7 +120,7 @@ const initStudioUi = () => {
 
   // Position : bibliothèque, chargement PGN/FEN et montage manuel.
   // Conserver les champs et la palette de montage ; les commandes de jeu, de trait et d'indices restent hors de ce panneau.
-  for (const selector of ['.cell-library', '.cell-pgn', '.cell-fen', '.cell-palette']) {
+  for (const selector of ['.cell-library', '.cell-pgn', '.cell-fen', '.cell-palette', '.cell-play', '.cell-start', '.cell-hints']) {
     const element = document.querySelector(selector);
     if (element) positionTools.appendChild(element);
   }
@@ -206,7 +206,8 @@ const initStudioUi = () => {
   const paletteCell = positionTools.querySelector('.cell-palette');
   positionTools.append(browsePgn, ...(libraryCell ? [libraryCell] : []),
     ...(pgnCell ? [pgnCell] : []), ...(fenCell ? [fenCell] : []), presets,
-    ...(paletteCell ? [paletteCell] : []));
+    ...(paletteCell ? [paletteCell] : []),
+    ...['.cell-play', '.cell-start', '.cell-hints'].map(selector => positionTools.querySelector(selector)).filter(Boolean));
 
   // Analyse et annotations graphiques : on déplace les éléments existants, sans les recréer.
   // Le panneau d'évaluation reste près de l'échiquier ; la palette graphique
