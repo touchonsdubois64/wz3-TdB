@@ -17,7 +17,8 @@ const HEADER = /\[\s*(\w+)\s+"((?:[^"\\]|\\.)*)"\s*\]/g;
  * Fonctionne aussi quand tout le PGN tient sur une seule ligne (texte collé dans un champ).
  */
 function splitGame(text) {
-  let source = String(text).replace(/\r/g, '\n');
+  // Certains exports Windows/UTF-8 ajoutent un BOM avant le premier tag PGN.
+  let source = String(text).replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n').trim();
 
   // seconde partie : un deuxième en-tête [Event "..."] coupe le texte
   const events = [...source.matchAll(/\[\s*Event\s+"/g)];
