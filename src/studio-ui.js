@@ -328,15 +328,43 @@ const initStudioUi = () => {
   diagramButton.className = 'export-pgn-button xpgn-action-button studio-diagram-download';
   diagramButton.title = 'Télécharger le diagramme';
   diagramButton.setAttribute('aria-label', 'Télécharger le diagramme');
-  diagramButton.innerHTML = '<svg class="studio-board-mark" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19"/><path d="M8.83 2.5v19M15.16 2.5v19M2.5 8.83h19M2.5 15.16h19"/></svg><span>Télécharger le diagramme</span>';
-  diagramButton.addEventListener('click', async () => {
-    const format = window.prompt('Format du diagramme : png ou jpeg', 'png');
-    if (!format) return;
-    const normalized = format.trim().toLowerCase();
-    if (!['png', 'jpeg', 'jpg'].includes(normalized)) { window.alert('Choisis PNG ou JPEG.'); return; }
-    const name = window.prompt('Nom du fichier (sans extension)', 'diagramme-echecs');
-    if (name === null) return;
-    await exportDiagram(normalized === 'jpg' ? 'jpeg' : normalized, name.trim() || 'diagramme-echecs');
+  diagramButton.innerHTML = '<img class="studio-download-icon" src="' +
+    new URL((import.meta.env.DEV ? 'docs/images/' : 'images/') + 'download-pgn.png', document.baseURI).href +
+    '" alt="" aria-hidden="true"><span>Télécharger le diagramme</span>';
+
+  const diagramDialog = document.createElement('dialog');
+  diagramDialog.className = 'studio-diagram-dialog';
+  diagramDialog.setAttribute('aria-labelledby', 'studio-diagram-title');
+  diagramDialog.innerHTML = `
+    <form method="dialog" class="studio-diagram-form">
+      <h2 id="studio-diagram-title">Télécharger le diagramme</h2>
+      <label>Nom du fichier
+        <input name="filename" type="text" value="diagramme-echecs" maxlength="80" required>
+      </label>
+      <label>Format
+        <select name="format">
+          <option value="png">PNG</option>
+          <option value="jpeg">JPEG</option>
+        </select>
+      </label>
+      <div class="studio-diagram-actions">
+        <button type="button" data-cancel>Annuler</button>
+        <button type="submit" value="download">Télécharger</button>
+      </div>
+    </form>`;
+  document.body.appendChild(diagramDialog);
+  diagramButton.addEventListener('click', () => {
+    diagramDialog.querySelector('[name="filename"]').value = 'diagramme-echecs';
+    if (!diagramDialog.open) diagramDialog.showModal();
+  });
+  diagramDialog.querySelector('[data-cancel]').addEventListener('click', () => diagramDialog.close('cancel'));
+  diagramDialog.querySelector('form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const filename = form.elements.namedItem('filename').value.trim() || 'diagramme-echecs';
+    const format = form.elements.namedItem('format').value;
+    diagramDialog.close('download');
+    await exportDiagram(format, filename);
   });
   panels.get('records').content.appendChild(diagramButton);
 
